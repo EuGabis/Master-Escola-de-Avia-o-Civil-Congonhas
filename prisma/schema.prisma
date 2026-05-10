@@ -1,0 +1,365 @@
+// Master CRM - Atendimento WhatsApp via Evolution API
+// Schema baseado em solution_atendimento, sem o modulo Reservation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// CORE - Multi-tenant + Auth
+// ============================================================
+
+model Workspace {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  evolutionInstance String?
+  evolutionUrl      String?
+  evolutionKey      String?
+  plan              String   @default("free")
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users         User[]
+  contacts      Contact[]
+  conversations Conversation[]
+  labels        Label[]
+  settings      Setting[]
+  agentConfig   AgentConfig?
+  automations   Automation[]
+  kanbanColumns KanbanColumn[]
+  quickReplies  QuickReply[]
+  followUps     FollowUp[]
+  invites       UserInvite[]
+  auditLogs     AuditLog[]
+
+  @@index([slug])
+}
+
+model User {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  email       String   @unique
+  password    String
+  role        String   @default("agent") // owner | admin | agent
+  avatar      String?
+  color       String   @default("#6366f1")
+  isOnline    Boolean  @default(false)
+  lastLoginAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignments ConversationAssignment[]
+  messages    Message[]
+  invites     UserInvite[]             @relation("InvitedBy")
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+// ============================================================
+// CRM - Contatos e Conversas
+// ============================================================
+
+model Contact {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  phone       String
+  email       String?
+  avatar      String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@unique([workspaceId, phone])
+  @@index([workspaceId])
+  @@index([phone])
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  contactId     String
+  status        String    @default("open") // open | pending | resolved | snoozed
+  channel       String    @default("whatsapp")
+  unreadCount   Int       @default(0)
+  lastMessage   String?
+  lastMessageAt DateTime?
+  aiEnabled     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace   Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact     Contact                  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  assignments ConversationAssignment[]
+  labels      ConversationLabel[]
+  kanbanCard  KanbanCard?
+
+  @@index([workspaceId, status])
+  @@index([contactId])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String?
+  content        String
+  type           String    @default("text") // text | image | audio | video | document
+  direction      String    // in | out
+  status         String    @default("sent") // sent | delivered | read | failed
+  mediaUrl       String?
+  mediaBase64    String?
+  fileName       String?
+  evolutionId    String?   @unique
+  timestamp      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, timestamp])
+  @@index([evolutionId])
+}
+
+model ConversationAssignment {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  assignedAt     DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+// ============================================================
+// Organizacao - Labels, Kanban, Respostas rapidas
+// ============================================================
+
+model Label {
+  id          String @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String @default("#6366f1")
+
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversations ConversationLabel[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model ConversationLabel {
+  conversationId String
+  labelId        String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  label        Label        @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, labelId])
+  @@index([labelId])
+}
+
+model KanbanColumn {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String   @default("#6366f1")
+  order       Int      @default(0)
+  wipLimit    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  cards     KanbanCard[]
+
+  @@index([workspaceId, order])
+}
+
+model KanbanCard {
+  id             String   @id @default(cuid())
+  columnId       String
+  conversationId String?  @unique
+  title          String
+  notes          String?
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  column       KanbanColumn  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([columnId, order])
+}
+
+model QuickReply {
+  id          String   @id @default(cuid())
+  workspaceId String
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// ============================================================
+// Automacoes e IA
+// ============================================================
+
+model Setting {
+  id          String @id @default(cuid())
+  workspaceId String
+  key         String
+  value       String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+}
+
+model AgentConfig {
+  id                  String    @id @default(cuid())
+  workspaceId         String    @unique
+  enabled             Boolean   @default(false)
+  systemPrompt        String?
+  stopCommand         String    @default("/humano")
+  model               String    @default("claude-haiku-4-5-20251001")
+  apiKey              String?
+  tokensUsedTotal     Int       @default(0)
+  tokensUsedMonth     Int       @default(0)
+  tokenMonthStart     DateTime  @default(now())
+  tokenAlertThreshold Int?
+  lastTokenUsage      Int?
+  lastTokenUsageAt    DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Automation {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  name             String
+  enabled          Boolean  @default(true)
+  triggerType      String   // keyword | first_message | hours_no_response
+  keywords         String?  // CSV
+  assignUserId     String?
+  pipelineColumnId String?
+  addLabelName     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, enabled])
+}
+
+model FollowUp {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  name             String
+  enabled          Boolean  @default(true)
+  triggerType      String   // inactivity | column_enter
+  inactivityHours  Int?
+  columnId         String?
+  message          String
+  transferToUserId String?
+  maxTimes         Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  logs      FollowUpLog[]
+
+  @@index([workspaceId, enabled])
+}
+
+model FollowUpLog {
+  id             String   @id @default(cuid())
+  followUpId     String
+  conversationId String
+  sentCount      Int      @default(1)
+  lastSentAt     DateTime @default(now())
+
+  followUp FollowUp @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+
+  @@unique([followUpId, conversationId])
+}
+
+// ============================================================
+// Seguranca - Rate limit, Reset senha, Convites, Auditoria
+// ============================================================
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique // ex: "login:email" ou "ip:1.2.3.4"
+  attempts  Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([resetAt])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  email     String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model UserInvite {
+  id          String    @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String    @default("agent")
+  token       String    @unique
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String?
+  action      String
+  target      String?
+  meta        String?  // JSON serializado
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([userId])
+}
