@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { pusher, channels, events as ev } from "@/lib/pusher";
-import { normalizePhone } from "@/lib/evolution";
+import { normalizePhone, sendText } from "@/lib/evolution";
+import { generateAIReply, checkStopCommand } from "@/lib/ai";
 
 /**
  * Webhook receiver da Evolution API.
@@ -178,6 +179,89 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     fileName,
     timestamp: timestamp.toISOString(),
   });
+
+  // === AGENTE IA ===
+  // Responde automaticamente se:
+  //  - mensagem eh do contato (in, nao fromMe)
+  //  - texto (nao audio/video etc)
+  //  - conversa tem aiEnabled
+  //  - nao eh comando de stop
+  if (direction === "in" && type === "text") {
+    // Recarrega conversa (status pode ter mudado)
+    const conv = await db.conversation.findUnique({
+      where: { id: conversation.id },
+      select: { aiEnabled: true, status: true },
+    });
+
+    if (!conv) return;
+
+    // Detecta /humano - desliga IA + status pending
+    const stopped = await checkStopCommand(workspaceId, conversation.id, content);
+    if (stopped) {
+      await pusher.trigger(channels.workspace(workspaceId), ev.conversationUpdate, {
+        conversationId: conversation.id,
+        status: "pending",
+        aiEnabled: false,
+      });
+      return;
+    }
+
+    if (!conv.aiEnabled) return;
+
+    // Pequeno delay para parecer mais humano (300ms)
+    await new Promise((r) => setTimeout(r, 300));
+
+    const reply = await generateAIReply({
+      workspaceId,
+      conversationId: conversation.id,
+    });
+    if (!reply || !reply.text) return;
+
+    // Envia via Evolution
+    try {
+      const sendResult = await sendText({
+        number: phone,
+        text: reply.text,
+      });
+      const evolutionId = (sendResult as { key?: { id?: string } })?.key?.id;
+
+      const aiMsg = await db.message.create({
+        data: {
+          conversationId: conversation.id,
+          content: reply.text,
+          type: "text",
+          direction: "out",
+          status: "sent",
+          evolutionId,
+          timestamp: new Date(),
+        },
+      });
+
+      await db.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          lastMessage: reply.text.slice(0, 200),
+          lastMessageAt: new Date(),
+        },
+      });
+
+      await pusher.trigger(channels.conversation(conversation.id), ev.messageNew, {
+        id: aiMsg.id,
+        content: reply.text,
+        type: "text",
+        direction: "out",
+        status: "sent",
+        timestamp: aiMsg.timestamp.toISOString(),
+      });
+      await pusher.trigger(channels.workspace(workspaceId), ev.messageNew, {
+        conversationId: conversation.id,
+        direction: "out",
+        content: reply.text.slice(0, 200),
+      });
+    } catch (err) {
+      console.error("[ai] erro ao enviar resposta IA:", err);
+    }
+  }
 }
 
 async function handleMessageUpdate(workspaceId: string, payload: WebhookPayload) {

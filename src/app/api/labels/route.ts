@@ -13,6 +13,7 @@ export async function GET() {
   const labels = await db.label.findMany({
     where: { workspaceId: session.wid },
     orderBy: { name: "asc" },
+    include: { _count: { select: { conversations: true } } },
   });
 
   return NextResponse.json({ labels });

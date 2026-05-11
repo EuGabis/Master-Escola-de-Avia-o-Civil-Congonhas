@@ -1,5 +1,6 @@
 import { Settings, ShieldCheck, Bot, Webhook } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { AgentConfigForm } from "@/components/AgentConfigForm";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 
@@ -39,12 +40,8 @@ export default async function ConfiguracoesPage() {
           <Field label="URL" value={workspace?.evolutionUrl} mono />
         </Card>
 
-        <Card icon={Bot} title="Agente IA" badge="Em breve">
-          <p className="text-sm text-slate-500">
-            Configure o agente IA (Anthropic/OpenAI) para responder
-            automaticamente. Define system prompt, modelo, comando de transferencia
-            para humano e limite de tokens por mes.
-          </p>
+        <Card icon={Bot} title="Agente IA (Claude)">
+          <AgentConfigForm />
         </Card>
 
         <Card icon={ShieldCheck} title="Seguranca">
