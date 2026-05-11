@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { pusher, channels, events as ev } from "@/lib/pusher";
 import { normalizePhone, sendText } from "@/lib/evolution";
 import { generateAIReply, checkStopCommand } from "@/lib/ai";
+import { runAutomations } from "@/lib/automation";
 
 /**
  * Webhook receiver da Evolution API.
@@ -179,6 +180,22 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     fileName,
     timestamp: timestamp.toISOString(),
   });
+
+  // === AUTOMATIONS ===
+  // Rodam APENAS em mensagens recebidas (in), nao em respostas nossas.
+  if (direction === "in") {
+    // Conta total de mensagens IN dessa conversa: se for 1, eh primeira mensagem
+    const incomingCount = await db.message.count({
+      where: { conversationId: conversation.id, direction: "in" },
+    });
+    await runAutomations({
+      workspaceId,
+      conversationId: conversation.id,
+      contactName: contact.name,
+      messageContent: content,
+      isFirstMessage: incomingCount === 1,
+    });
+  }
 
   // === AGENTE IA ===
   // Responde automaticamente se:

@@ -10,6 +10,7 @@ import {
   BarChart3,
   Users,
   Tag,
+  Zap,
   Settings,
   ChevronLeft,
   Wifi,
@@ -33,6 +34,7 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/contatos", label: "Contatos", icon: Users },
   { href: "/etiquetas", label: "Etiquetas", icon: Tag },
+  { href: "/automacoes", label: "Automacoes", icon: Zap },
   { href: "/configuracoes", label: "Configuracoes", icon: Settings },
 ];
 
