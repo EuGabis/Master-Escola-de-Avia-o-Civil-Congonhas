@@ -288,12 +288,42 @@ export default function ConversationsClient({
               <div className="w-10 h-10 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-sm font-bold">
                 {active.contact.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <h2 className="font-semibold text-slate-900 dark:text-white">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-slate-900 dark:text-white truncate">
                   {active.contact.name}
                 </h2>
                 <p className="text-xs text-slate-500">{active.contact.phone}</p>
               </div>
+              <button
+                onClick={async () => {
+                  const res = await fetch("/api/kanban");
+                  if (!res.ok) return alert("Erro ao listar colunas");
+                  const { columns } = (await res.json()) as { columns: { id: string; name: string }[] };
+                  if (columns.length === 0) return alert("Crie ao menos uma coluna em /pipeline");
+                  const choice = prompt(
+                    "Adicionar ao Pipeline:\n" +
+                      columns.map((c, i) => `${i + 1}. ${c.name}`).join("\n") +
+                      "\n\nDigite o numero:"
+                  );
+                  const idx = parseInt(choice ?? "", 10) - 1;
+                  if (Number.isNaN(idx) || !columns[idx]) return;
+                  const r = await fetch("/api/kanban/cards", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      columnId: columns[idx].id,
+                      conversationId: active.id,
+                      title: active.contact.name,
+                    }),
+                  });
+                  const data = await r.json();
+                  if (!r.ok) alert(data.error ?? "Erro");
+                  else alert("Adicionado ao Pipeline!");
+                }}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-master-orange hover:text-master-orange transition text-slate-600 dark:text-slate-300"
+              >
+                + Pipeline
+              </button>
             </header>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-2">
