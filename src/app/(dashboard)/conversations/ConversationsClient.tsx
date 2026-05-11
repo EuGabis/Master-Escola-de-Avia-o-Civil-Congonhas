@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RefreshCw, Plus, Search, Send, MessagesSquare } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Modal, Button, Label } from "@/components/Modal";
 
 type Status = "open" | "pending" | "resolved" | "all";
 
@@ -51,6 +52,9 @@ export default function ConversationsClient({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pipelineOpen, setPipelineOpen] = useState(false);
+  const [pipelineCols, setPipelineCols] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [pipelineMsg, setPipelineMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
@@ -150,7 +154,10 @@ export default function ConversationsClient({
         body: JSON.stringify({ text: input.trim() }),
       });
       if (res.ok) setInput("");
-      else alert((await res.json()).error ?? "Erro ao enviar");
+      else {
+        const data = await res.json();
+        console.error("Erro envio:", data.error);
+      }
     } finally {
       setSending(false);
     }
@@ -297,28 +304,11 @@ export default function ConversationsClient({
               <button
                 onClick={async () => {
                   const res = await fetch("/api/kanban");
-                  if (!res.ok) return alert("Erro ao listar colunas");
-                  const { columns } = (await res.json()) as { columns: { id: string; name: string }[] };
-                  if (columns.length === 0) return alert("Crie ao menos uma coluna em /pipeline");
-                  const choice = prompt(
-                    "Adicionar ao Pipeline:\n" +
-                      columns.map((c, i) => `${i + 1}. ${c.name}`).join("\n") +
-                      "\n\nDigite o numero:"
-                  );
-                  const idx = parseInt(choice ?? "", 10) - 1;
-                  if (Number.isNaN(idx) || !columns[idx]) return;
-                  const r = await fetch("/api/kanban/cards", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      columnId: columns[idx].id,
-                      conversationId: active.id,
-                      title: active.contact.name,
-                    }),
-                  });
-                  const data = await r.json();
-                  if (!r.ok) alert(data.error ?? "Erro");
-                  else alert("Adicionado ao Pipeline!");
+                  if (!res.ok) return;
+                  const data = await res.json();
+                  setPipelineCols(data.columns);
+                  setPipelineMsg(null);
+                  setPipelineOpen(true);
                 }}
                 className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-master-orange hover:text-master-orange transition text-slate-600 dark:text-slate-300"
               >
@@ -389,6 +379,69 @@ export default function ConversationsClient({
           </>
         )}
       </section>
+
+      {/* Modal: adicionar ao Pipeline */}
+      <Modal
+        open={pipelineOpen}
+        onClose={() => setPipelineOpen(false)}
+        title="Adicionar ao Pipeline"
+        description={active ? `${active.contact.name} sera vinculado(a) ao card` : ""}
+      >
+        {pipelineMsg && (
+          <div className="mb-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm">
+            {pipelineMsg}
+          </div>
+        )}
+        {pipelineCols.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            Nenhuma coluna ainda. Crie em /pipeline.
+          </p>
+        ) : (
+          <>
+            <Label>Escolha a coluna</Label>
+            <div className="space-y-1">
+              {pipelineCols.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={async () => {
+                    if (!active) return;
+                    const r = await fetch("/api/kanban/cards", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        columnId: c.id,
+                        conversationId: active.id,
+                        title: active.contact.name,
+                      }),
+                    });
+                    const data = await r.json();
+                    if (!r.ok) {
+                      setPipelineMsg(data.error ?? "Erro");
+                    } else {
+                      setPipelineMsg(`Adicionado em "${c.name}"!`);
+                      setTimeout(() => setPipelineOpen(false), 1200);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-master-orange hover:bg-master-orange/5 transition text-left"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: c.color }}
+                  />
+                  <span className="text-sm font-medium text-slate-900 dark:text-white flex-1">
+                    {c.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        <div className="mt-4 flex justify-end">
+          <Button variant="ghost" onClick={() => setPipelineOpen(false)}>
+            Fechar
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
