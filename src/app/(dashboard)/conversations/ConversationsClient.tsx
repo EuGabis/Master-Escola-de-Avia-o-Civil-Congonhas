@@ -92,12 +92,24 @@ export default function ConversationsClient({
   useEffect(() => {
     if (!activeId) return;
     void loadMessages(activeId);
+    // Optimistic: zera unreadCount localmente assim que abre
+    setConversations((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c))
+    );
     const pusher = getPusherClient();
     const channel = pusher.subscribe(`private-conversation-${activeId}`);
     channel.bind("message:new", (msg: Message) => {
       setMessages((prev) =>
         prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
       );
+      // Mensagem nova entrou na conversa ativa: marca como lida no servidor
+      // (re-GET messages zera unreadCount na API)
+      if (msg.direction === "in") {
+        void fetch(`/api/conversations/${activeId}/messages`).catch(() => null);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c))
+        );
+      }
     });
     channel.bind("message:status", ({ id, status }: { id: string; status: string }) => {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
