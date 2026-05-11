@@ -23,17 +23,43 @@ interface Data {
 
 export default function AnalyticsClient() {
   const [data, setData] = useState<Data | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/analytics")
-      .then((r) => r.json())
-      .then(setData);
+    let cancelled = false;
+    fetch("/api/analytics")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Erro ao carregar");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  if (error) {
+    return (
+      <div className="p-8 max-w-5xl mx-auto">
+        <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-300">
+          Falha ao carregar métricas: {error}
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
-      <div className="p-8">
-        <p className="text-sm text-slate-500">Carregando metricas...</p>
+      <div className="p-8 max-w-5xl mx-auto">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span className="w-4 h-4 border-2 border-master-orange border-t-transparent rounded-full animate-spin" />
+          Carregando métricas...
+        </div>
       </div>
     );
   }

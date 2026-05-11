@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export async function GET() {
   const session = await getSession();
@@ -53,40 +54,45 @@ export async function GET() {
     }),
   ]);
 
-  // Mensagens por dia (30 dias)
+  // Mensagens por dia (30 dias) - 1 query agregada
+  const start30d = new Date(now);
+  start30d.setDate(now.getDate() - 29);
+  start30d.setHours(0, 0, 0, 0);
+
+  const [dailyRaw, hourlyRaw] = await Promise.all([
+    db.$queryRaw<{ day: Date; count: bigint }[]>`
+      SELECT DATE_TRUNC('day', m."timestamp") AS day, COUNT(*)::bigint AS count
+      FROM "Message" m
+      JOIN "Conversation" c ON c.id = m."conversationId"
+      WHERE c."workspaceId" = ${ws}
+        AND m."timestamp" >= ${start30d}
+      GROUP BY day
+      ORDER BY day
+    `,
+    db.$queryRaw<{ hr: number; count: bigint }[]>`
+      SELECT EXTRACT(HOUR FROM m."timestamp")::int AS hr, COUNT(*)::bigint AS count
+      FROM "Message" m
+      JOIN "Conversation" c ON c.id = m."conversationId"
+      WHERE c."workspaceId" = ${ws}
+        AND m.direction = 'in'
+        AND m."timestamp" >= ${since7d}
+      GROUP BY hr
+    `,
+  ]);
+
+  const dayMap = new Map<string, number>();
+  for (const r of dailyRaw) dayMap.set(r.day.toISOString().slice(0, 10), Number(r.count));
   const msgsByDay: { date: string; count: number }[] = [];
   for (let i = 29; i >= 0; i--) {
-    const start = new Date(now);
-    start.setDate(now.getDate() - i);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setHours(23, 59, 59, 999);
-    const c = await db.message.count({
-      where: {
-        conversation: { workspaceId: ws },
-        timestamp: { gte: start, lte: end },
-      },
-    });
-    msgsByDay.push({
-      date: start.toISOString().slice(0, 10),
-      count: c,
-    });
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    const key = d.toISOString().slice(0, 10);
+    msgsByDay.push({ date: key, count: dayMap.get(key) ?? 0 });
   }
 
-  // Distribuicao por hora (24h, ultimos 7 dias)
   const msgsByHour: number[] = Array(24).fill(0);
-  const recentMsgs = await db.message.findMany({
-    where: {
-      conversation: { workspaceId: ws },
-      direction: "in",
-      timestamp: { gte: since7d },
-    },
-    select: { timestamp: true },
-    take: 5000,
-  });
-  for (const m of recentMsgs) {
-    msgsByHour[m.timestamp.getHours()]!++;
-  }
+  for (const r of hourlyRaw) msgsByHour[r.hr] = Number(r.count);
 
   // Top 5 contatos mais ativos (mais mensagens nos ultimos 30 dias)
   const topContactsRaw = await db.message.groupBy({

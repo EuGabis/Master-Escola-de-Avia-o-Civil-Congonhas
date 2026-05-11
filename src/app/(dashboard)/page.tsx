@@ -75,21 +75,30 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  // Heatmap simples por dia da semana (ultimos 7 dias)
+  // 7 dias agregados em 1 query (GROUP BY day)
+  const start7d = new Date(now);
+  start7d.setDate(now.getDate() - 6);
+  start7d.setHours(0, 0, 0, 0);
+
+  const raw = await db.$queryRaw<{ day: Date; count: bigint }[]>`
+    SELECT DATE_TRUNC('day', m."timestamp") AS day, COUNT(*)::bigint AS count
+    FROM "Message" m
+    JOIN "Conversation" c ON c.id = m."conversationId"
+    WHERE c."workspaceId" = ${session.wid}
+      AND m."timestamp" >= ${start7d}
+    GROUP BY day
+    ORDER BY day
+  `;
+  const dayMap = new Map<string, number>();
+  for (const r of raw) {
+    dayMap.set(r.day.toISOString().slice(0, 10), Number(r.count));
+  }
   const msgsByDay: number[] = [];
   for (let i = 6; i >= 0; i--) {
-    const start = new Date(now);
-    start.setDate(now.getDate() - i);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setHours(23, 59, 59, 999);
-    const c = await db.message.count({
-      where: {
-        conversation: { workspaceId: session.wid },
-        timestamp: { gte: start, lte: end },
-      },
-    });
-    msgsByDay.push(c);
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    msgsByDay.push(dayMap.get(d.toISOString().slice(0, 10)) ?? 0);
   }
   const maxDay = Math.max(1, ...msgsByDay);
 
