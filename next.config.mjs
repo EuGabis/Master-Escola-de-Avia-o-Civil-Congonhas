@@ -1,15 +1,24 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Prisma e bcrypt sao bibliotecas Node nativas - nao podem ser bundladas
   serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
-
-  // Ignora ESLint em build de producao (rodamos lint manual)
   eslint: { ignoreDuringBuilds: true },
-
-  // Permite o build em caso de warnings do TS (mantemos typecheck manual via `npm run typecheck`)
   typescript: { ignoreBuildErrors: false },
-
   poweredByHeader: false,
 };
 
-export default nextConfig;
+const sentryConfig = {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  disableLogger: true,
+  // So envia source maps se houver auth token
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+};
+
+// Aplica Sentry apenas se DSN configurado, senao mantem config base
+export default process.env.SENTRY_DSN
+  ? withSentryConfig(nextConfig, sentryConfig)
+  : nextConfig;

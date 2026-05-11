@@ -52,16 +52,18 @@ export default function AnalyticsClient() {
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 lg:px-8 py-5">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-          Analytics
-        </h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Metricas dos ultimos 30 dias
-        </p>
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-5">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            Analytics
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Métricas dos últimos 30 dias
+          </p>
+        </div>
       </header>
 
-      <div className="px-6 lg:px-8 py-6 max-w-[1400px] mx-auto space-y-6">
+      <div className="px-6 lg:px-8 py-6 max-w-5xl mx-auto space-y-6">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Kpi
