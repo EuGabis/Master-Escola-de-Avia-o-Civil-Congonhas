@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getPusherClient, disconnectPusher } from "@/lib/pusher-client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Logo } from "@/components/Logo";
 
 interface Conversation {
   id: string;
@@ -127,17 +128,16 @@ export default function InboxClient({
     <div className="h-screen flex bg-slate-50 dark:bg-slate-900">
       {/* SIDEBAR - lista de conversas */}
       <aside className="w-80 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col">
-        <header className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-slate-900 dark:text-white">Conversas</h1>
-            <p className="text-xs text-slate-500">{userName}</p>
-          </div>
-          <Link
-            href="/"
-            className="text-xs text-indigo-600 hover:underline"
-          >
-            voltar
+        <header className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <Link href="/" className="block mb-3 hover:opacity-80 transition">
+            <Logo size="sm" />
           </Link>
+          <div className="flex items-center justify-between">
+            <h1 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
+              Conversas
+            </h1>
+            <span className="text-xs text-slate-500 truncate ml-2">{userName}</span>
+          </div>
         </header>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
@@ -152,7 +152,7 @@ export default function InboxClient({
                 key={c.id}
                 onClick={() => setActiveId(c.id)}
                 className={`w-full text-left p-3 border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition ${
-                  activeId === c.id ? "bg-indigo-50 dark:bg-indigo-900/20" : ""
+                  activeId === c.id ? "bg-master-orange-50 dark:bg-master-orange-900/20" : ""
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -160,7 +160,7 @@ export default function InboxClient({
                     {c.contact.name}
                   </span>
                   {c.unreadCount > 0 && (
-                    <span className="bg-indigo-600 text-white text-xs rounded-full px-2 py-0.5 ml-2">
+                    <span className="bg-master-orange text-white text-xs rounded-full px-2 py-0.5 ml-2">
                       {c.unreadCount}
                     </span>
                   )}
@@ -208,7 +208,7 @@ export default function InboxClient({
                   <div
                     className={`max-w-md rounded-2xl px-4 py-2 ${
                       m.direction === "out"
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-master-orange text-white"
                         : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
                     }`}
                   >
@@ -216,7 +216,7 @@ export default function InboxClient({
                     <div
                       className={`text-[10px] mt-1 ${
                         m.direction === "out"
-                          ? "text-indigo-200"
+                          ? "text-master-orange-100"
                           : "text-slate-400"
                       }`}
                     >
@@ -246,7 +246,7 @@ export default function InboxClient({
               <button
                 type="submit"
                 disabled={sending || !input.trim()}
-                className="rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium px-6"
+                className="rounded-full bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium px-6"
               >
                 {sending ? "..." : "Enviar"}
               </button>
