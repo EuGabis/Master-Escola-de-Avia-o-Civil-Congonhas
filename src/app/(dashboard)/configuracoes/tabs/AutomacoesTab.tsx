@@ -51,7 +51,7 @@ export function AutomacoesTab() {
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
       <header className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h2 className="font-semibold text-slate-900 dark:text-white">Automacoes</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-white">Automações</h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {items.length} regras · classificam conversas automaticamente quando uma mensagem chega
           </p>

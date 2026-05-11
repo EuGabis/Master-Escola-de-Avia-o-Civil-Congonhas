@@ -29,7 +29,7 @@ export function WebhookTab() {
   return (
     <div className="space-y-6">
       <SectionCard
-        title="Integracao WhatsApp"
+        title="Integração WhatsApp"
         description="Status da conexao com sua instancia"
       >
         <div className="flex items-center justify-between">
@@ -49,7 +49,7 @@ export function WebhookTab() {
             <div>
               <div className="text-sm font-semibold text-slate-900 dark:text-white">
                 {state === "online" && "Tudo conectado"}
-                {state === "offline" && "Conexao com problema"}
+                {state === "offline" && "Conexão com problema"}
                 {state === "checking" && "Verificando..."}
               </div>
               <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">

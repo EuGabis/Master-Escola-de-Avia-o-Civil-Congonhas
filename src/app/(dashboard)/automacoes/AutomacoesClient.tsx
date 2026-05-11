@@ -51,7 +51,7 @@ export default function AutomacoesClient() {
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 lg:px-8 py-5 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Automacoes</h1>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Automações</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {items.length} regras · classificam conversas automaticamente quando uma mensagem chega
           </p>

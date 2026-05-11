@@ -33,7 +33,7 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/contatos", label: "Contatos", icon: Users },
   { href: "/etiquetas", label: "Etiquetas", icon: Tag },
-  { href: "/configuracoes", label: "Configuracoes", icon: Settings },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export function Sidebar({ workspaceId, user }: SidebarProps) {
@@ -87,28 +87,34 @@ export function Sidebar({ workspaceId, user }: SidebarProps) {
         <ChevronLeft size={14} className={cn("transition", collapsed && "rotate-180")} />
       </button>
 
-      {/* STATUS WhatsApp */}
-      <div className="px-3 mb-1">
+      {/* STATUS WhatsApp - igual Estacione Park, fica no topo logo apos logo */}
+      <div className={cn("px-4 mb-2", collapsed && "px-2")}>
         <div
           className={cn(
-            "flex items-center gap-2 text-xs px-3 py-2 rounded-lg transition",
-            wppState === "open"
-              ? "bg-emerald-500/15 text-emerald-300"
-              : wppState === "connecting"
-                ? "bg-amber-500/15 text-amber-300"
-                : "bg-red-500/15 text-red-300",
+            "flex items-center gap-2 text-xs",
             collapsed && "justify-center"
           )}
         >
           {wppState === "open" ? (
-            <Wifi size={14} className="shrink-0" />
+            <Wifi size={13} className="text-emerald-400 shrink-0" />
+          ) : wppState === "connecting" ? (
+            <Wifi size={13} className="text-amber-400 shrink-0 animate-pulse" />
           ) : (
-            <WifiOff size={14} className="shrink-0" />
+            <WifiOff size={13} className="text-red-400 shrink-0" />
           )}
           {!collapsed && (
-            <span className="font-medium">
+            <span
+              className={cn(
+                "font-medium",
+                wppState === "open"
+                  ? "text-emerald-400"
+                  : wppState === "connecting"
+                    ? "text-amber-400"
+                    : "text-red-400"
+              )}
+            >
               {wppState === "open"
-                ? "Conectado"
+                ? "WhatsApp conectado"
                 : wppState === "connecting"
                   ? "Conectando..."
                   : "Desconectado"}

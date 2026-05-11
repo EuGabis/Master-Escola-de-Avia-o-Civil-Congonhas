@@ -1,7 +1,7 @@
 import { cn } from "@/lib/cn";
 
 /**
- * Logo da Master Escola de Aviacao - recriado em SVG.
+ * Logo da Master Escola de Aviação - recriado em SVG.
  * Cores e estilo seguem o site mastercongonhas.com.br
  */
 export function Logo({
@@ -31,7 +31,7 @@ export function Logo({
         MASTER
       </span>
       <span className={cn("font-semibold tracking-[0.2em] mt-0.5", sizes.sub)}>
-        ESCOLA DE AVIACAO
+        ESCOLA DE AVIAÇÃO
       </span>
     </div>
   );

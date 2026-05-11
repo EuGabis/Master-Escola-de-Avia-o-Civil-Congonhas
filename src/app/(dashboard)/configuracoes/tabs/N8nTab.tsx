@@ -7,7 +7,7 @@ export function N8nTab() {
   return (
     <div className="space-y-6">
       <SectionCard
-        title="Integracao n8n"
+        title="Integração n8n"
         description="Conecte fluxos low-code para automacoes avancadas (CRM, email, planilhas, calendario...)"
       >
         <div className="p-8 text-center">

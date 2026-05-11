@@ -1,7 +1,7 @@
-import ConfiguracoesClient from "./ConfiguracoesClient";
+import ConfiguraçõesClient from "./ConfiguracoesClient";
 
 export const dynamic = "force-dynamic";
 
 export default function ConfiguracoesPage() {
-  return <ConfiguracoesClient />;
+  return <ConfiguraçõesClient />;
 }

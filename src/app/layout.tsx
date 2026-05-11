@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Master CRM | Escola de Aviacao",
+  title: "Master CRM | Escola de Aviação",
   description:
-    "Sistema de atendimento da Master Escola de Aviacao Civil Congonhas.",
+    "Sistema de atendimento da Master Escola de Aviação Civil Congonhas.",
   icons: { icon: "/favicon.ico" },
 };
 
