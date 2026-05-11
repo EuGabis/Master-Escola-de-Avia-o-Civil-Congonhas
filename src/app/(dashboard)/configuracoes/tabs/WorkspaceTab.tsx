@@ -78,9 +78,6 @@ export function WorkspaceTab() {
             </p>
           </div>
         </div>
-        <span className="text-[10px] uppercase tracking-wider bg-master-orange/10 text-master-orange px-2 py-1 rounded font-medium">
-          Plano {ws.plan}
-        </span>
       </div>
 
       {/* Form */}
@@ -143,29 +140,6 @@ export function WorkspaceTab() {
         </div>
       </SectionCard>
 
-      {/* Info */}
-      <SectionCard title="Workspace">
-        <div className="space-y-2 text-sm">
-          <Row k="ID" v={ws.id} mono />
-          <Row k="Slug" v={ws.slug} mono />
-          <Row k="Plano" v={ws.plan} />
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
-      <span className="text-slate-500">{k}</span>
-      <span
-        className={`text-slate-900 dark:text-white ${
-          mono ? "font-mono text-xs" : "font-medium"
-        }`}
-      >
-        {v}
-      </span>
     </div>
   );
 }

@@ -266,9 +266,6 @@ export function AgentConfigForm() {
             </div>
           </div>
         )}
-        <div className="text-[10px] text-slate-500 mt-2">
-          Total acumulado: {cfg.tokensUsedTotal.toLocaleString("pt-BR")}
-        </div>
       </div>
 
       <div className="text-xs text-slate-500">

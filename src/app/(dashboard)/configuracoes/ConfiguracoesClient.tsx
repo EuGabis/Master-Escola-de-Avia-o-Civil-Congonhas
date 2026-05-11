@@ -7,7 +7,6 @@ import {
   Webhook,
   Bot,
   Zap,
-  Workflow,
   MessagesSquare,
   Users,
   UserCircle2,
@@ -18,7 +17,6 @@ import { WorkspaceTab } from "./tabs/WorkspaceTab";
 import { FollowUpTab } from "./tabs/FollowUpTab";
 import { WebhookTab } from "./tabs/WebhookTab";
 import { AutomacoesTab } from "./tabs/AutomacoesTab";
-import { N8nTab } from "./tabs/N8nTab";
 import { QuickRepliesTab } from "./tabs/QuickRepliesTab";
 import { AgentesTab } from "./tabs/AgentesTab";
 import { MyAccountTab } from "./tabs/MyAccountTab";
@@ -29,7 +27,6 @@ const TABS = [
   { key: "webhook", label: "Webhook", icon: Webhook },
   { key: "ia", label: "Agente IA", icon: Bot },
   { key: "automacoes", label: "Automacoes", icon: Zap },
-  { key: "n8n", label: "n8n", icon: Workflow },
   { key: "respostas", label: "Respostas Rapidas", icon: MessagesSquare },
   { key: "agentes", label: "Agentes", icon: Users },
   { key: "conta", label: "Minha conta", icon: UserCircle2 },
@@ -101,7 +98,6 @@ export default function ConfiguracoesClient() {
           </SectionCard>
         )}
         {tab === "automacoes" && <AutomacoesTab />}
-        {tab === "n8n" && <N8nTab />}
         {tab === "respostas" && <QuickRepliesTab />}
         {tab === "agentes" && <AgentesTab />}
         {tab === "conta" && <MyAccountTab />}
