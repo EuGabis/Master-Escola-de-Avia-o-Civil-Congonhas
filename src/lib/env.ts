@@ -18,16 +18,12 @@ const envSchema = z.object({
   WEBHOOK_SECRET: z.string().min(32, "WEBHOOK_SECRET deve ter pelo menos 32 caracteres"),
 
   // Evolution API (opcionais ate configurar)
-  EVOLUTION_API_URL: z
-    .union([z.string().url(), z.literal(""), z.undefined()])
-    .transform((v) => v ?? ""),
+  EVOLUTION_API_URL: z.string().optional().default(""),
   EVOLUTION_API_KEY: z.string().optional().default(""),
   EVOLUTION_INSTANCE_NAME: z.string().optional().default(""),
 
-  // App (URL publica; aceita vazio em build, usado em runtime)
-  NEXT_PUBLIC_APP_URL: z
-    .union([z.string().url(), z.literal(""), z.undefined()])
-    .transform((v) => v ?? ""),
+  // App (URL publica)
+  NEXT_PUBLIC_APP_URL: z.string().optional().default(""),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
   // Pusher Channels (realtime)
