@@ -5,6 +5,7 @@ import { pusher, channels, events as ev } from "@/lib/pusher";
 import { normalizePhone, sendText } from "@/lib/evolution";
 import { generateAIReply, checkStopCommand } from "@/lib/ai";
 import { runAutomations } from "@/lib/automation";
+import { autoAssignAgent } from "@/lib/assign";
 
 /**
  * Webhook receiver da Evolution API.
@@ -195,6 +196,11 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
       messageContent: content,
       isFirstMessage: incomingCount === 1,
     });
+
+    // Round-robin: atribui agente automaticamente na 1a mensagem
+    if (incomingCount === 1) {
+      await autoAssignAgent(workspaceId, conversation.id).catch(() => null);
+    }
   }
 
   // === AGENTE IA ===

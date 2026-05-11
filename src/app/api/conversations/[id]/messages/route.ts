@@ -30,7 +30,7 @@ export async function GET(
   const messages = await db.message.findMany({
     where: { conversationId: id },
     orderBy: { timestamp: "asc" },
-    take: 50,
+    take: 30, // limita pra evitar payload gigante quando ha midias base64
   });
 
   // Marca como lidas (zera unread)

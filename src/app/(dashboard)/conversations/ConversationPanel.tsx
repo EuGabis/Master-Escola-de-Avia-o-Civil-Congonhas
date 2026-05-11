@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bot, Plus, Tag, X, ExternalLink, Pencil } from "lucide-react";
+import { Bot, Plus, Tag, X, ExternalLink, Pencil, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface Contact {
@@ -30,13 +30,27 @@ interface KanbanCard {
   column: KanbanColumn;
 }
 
+interface Assignment {
+  user: { id: string; name: string; color: string; avatar: string | null };
+}
+
 interface ConversationDetails {
   id: string;
   status: string;
   aiEnabled: boolean;
   contact: Contact;
   labels: { label: Label }[];
+  assignments: Assignment[];
   kanbanCard: KanbanCard | null;
+}
+
+interface UserOption {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  color: string;
+  isOnline: boolean;
 }
 
 export function ConversationPanel({
@@ -49,17 +63,30 @@ export function ConversationPanel({
   const [conv, setConv] = useState<ConversationDetails | null>(null);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [columns, setColumns] = useState<KanbanColumn[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [creatingLabel, setCreatingLabel] = useState(false);
 
   async function load() {
-    const [c, l, k] = await Promise.all([
+    const [c, l, k, u] = await Promise.all([
       fetch(`/api/conversations/${conversationId}`).then((r) => r.json()),
       fetch("/api/labels").then((r) => r.json()),
       fetch("/api/kanban").then((r) => r.json()),
+      fetch("/api/users").then((r) => r.json()),
     ]);
     setConv(c.conversation);
     setAllLabels(l.labels ?? []);
     setColumns((k.columns ?? []).map((col: KanbanColumn) => col));
+    setUsers(u.users ?? []);
+  }
+
+  async function assignUser(userId: string | null) {
+    await fetch(`/api/conversations/${conversationId}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    await load();
+    onChange?.();
   }
 
   useEffect(() => {
@@ -259,6 +286,47 @@ export function ConversationPanel({
               Clique em uma coluna para adicionar / mover
             </p>
           </div>
+        )}
+      </Section>
+
+      {/* RESPONSÁVEL */}
+      <Section title="Responsável" icon={UserIcon}>
+        {conv.assignments.length > 0 && (
+          <div className="mb-2 flex items-center gap-2 bg-master-orange/5 border border-master-orange/20 rounded-lg p-2">
+            <div
+              style={{ backgroundColor: conv.assignments[0]!.user.color }}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+            >
+              {conv.assignments[0]!.user.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-sm font-medium text-slate-900 dark:text-white flex-1 truncate">
+              {conv.assignments[0]!.user.name}
+            </span>
+            <button
+              onClick={() => void assignUser(null)}
+              className="text-slate-400 hover:text-red-500 transition"
+              title="Remover"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <select
+          value={conv.assignments[0]?.user.id ?? ""}
+          onChange={(e) => void assignUser(e.target.value || null)}
+          className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange"
+        >
+          <option value="">{conv.assignments.length > 0 ? "Trocar agente..." : "Selecionar agente..."}</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name} ({u.role}){u.isOnline ? " ● online" : ""}
+            </option>
+          ))}
+        </select>
+        {conv.assignments.length === 0 && (
+          <p className="text-[10px] text-slate-400 mt-1">
+            Sem responsável atribuído.
+          </p>
         )}
       </Section>
 

@@ -5,9 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { getPusherClient, disconnectPusher } from "@/lib/pusher-client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, Plus, Search, Send, MessagesSquare } from "lucide-react";
+import { RefreshCw, Plus, Search, Send, MessagesSquare, Paperclip, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ConversationPanel } from "./ConversationPanel";
+import { MessageMedia } from "@/components/MessageMedia";
 
 type Status = "open" | "pending" | "resolved" | "all";
 
@@ -27,6 +28,9 @@ interface Message {
   direction: "in" | "out";
   status: string;
   timestamp: string;
+  mediaBase64?: string | null;
+  mediaUrl?: string | null;
+  fileName?: string | null;
 }
 
 const TABS: { key: Status; label: string }[] = [
@@ -52,6 +56,8 @@ export default function ConversationsClient({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
@@ -169,6 +175,51 @@ export default function ConversationsClient({
       }
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleFileUpload(file: File) {
+    if (!activeId || uploading) return;
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Arquivo muito grande. Máximo 15 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const mediaType: "image" | "video" | "audio" | "document" = file.type.startsWith("image/")
+        ? "image"
+        : file.type.startsWith("video/")
+          ? "video"
+          : file.type.startsWith("audio/")
+            ? "audio"
+            : "document";
+
+      const res = await fetch(`/api/conversations/${activeId}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mediaType,
+          mediaDataUrl: dataUrl,
+          fileName: file.name,
+          caption: input.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        setInput("");
+      } else {
+        const data = await res.json();
+        alert(data.error ?? "Falha ao enviar arquivo");
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -372,9 +423,20 @@ export default function ConversationsClient({
                         : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     )}
                   >
-                    <div className="text-sm whitespace-pre-wrap break-words">
-                      {m.content}
-                    </div>
+                    {m.type !== "text" && m.type !== "unknown" ? (
+                      <MessageMedia
+                        type={m.type}
+                        mediaBase64={m.mediaBase64}
+                        mediaUrl={m.mediaUrl}
+                        fileName={m.fileName}
+                        content={m.content}
+                        outgoing={m.direction === "out"}
+                      />
+                    ) : (
+                      <div className="text-sm whitespace-pre-wrap break-words">
+                        {m.content}
+                      </div>
+                    )}
                     <div
                       className={cn(
                         "text-[10px] mt-1",
@@ -397,19 +459,42 @@ export default function ConversationsClient({
 
             <form
               onSubmit={handleSend}
-              className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2"
+              className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
             >
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleFileUpload(f);
+                }}
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+                className="shrink-0 p-2.5 rounded-full text-slate-500 hover:text-master-orange hover:bg-master-orange/10 transition disabled:opacity-50"
+                title="Anexar arquivo (imagem, video, audio, doc - max 15MB)"
+              >
+                {uploading ? (
+                  <span className="block w-5 h-5 border-2 border-master-orange border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Paperclip size={18} />
+                )}
+              </button>
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Digite uma mensagem..."
-                disabled={sending}
+                placeholder={uploading ? "Enviando arquivo..." : "Digite uma mensagem..."}
+                disabled={sending || uploading}
                 className="flex-1 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
               />
               <button
                 type="submit"
-                disabled={sending || !input.trim()}
-                className="rounded-pill bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium px-6 flex items-center gap-2"
+                disabled={sending || uploading || !input.trim()}
+                className="rounded-pill bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium px-6 flex items-center gap-2 shrink-0"
               >
                 <Send size={16} />
                 {sending ? "..." : "Enviar"}

@@ -1,0 +1,19 @@
+{
+  "name": "Master CRM",
+  "short_name": "Master CRM",
+  "description": "Atendimento WhatsApp Master Escola de Aviação",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#F26522",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
@@ -13,7 +13,26 @@ export const metadata: Metadata = {
   title: "Master CRM | Escola de Aviação",
   description:
     "Sistema de atendimento da Master Escola de Aviação Civil Congonhas.",
-  icons: { icon: "/favicon.ico" },
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/icon.svg",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Master CRM",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F26522",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
