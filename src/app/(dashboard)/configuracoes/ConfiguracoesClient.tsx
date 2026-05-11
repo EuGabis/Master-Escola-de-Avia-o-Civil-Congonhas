@@ -53,7 +53,7 @@ export default function ConfiguracoesClient() {
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       {/* HEADER */}
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="px-6 lg:px-8 py-5">
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-5">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
             Configurações
           </h1>
@@ -63,8 +63,8 @@ export default function ConfiguracoesClient() {
         </div>
       </header>
 
-      {/* TABS (pegada Estacione Park - pill bar) */}
-      <div className="px-6 lg:px-8 pt-5">
+      {/* TABS - alinhado com header e conteudo */}
+      <div className="max-w-5xl mx-auto px-6 lg:px-8 pt-5">
         <nav className="inline-flex flex-wrap gap-1 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
           {TABS.map((t) => {
             const Icon = t.icon;
@@ -87,8 +87,8 @@ export default function ConfiguracoesClient() {
         </nav>
       </div>
 
-      {/* CONTENT */}
-      <div className="px-6 lg:px-8 pb-8 pt-6 max-w-4xl mx-auto">
+      {/* CONTENT - mesmo container que header e tabs */}
+      <div className="max-w-5xl mx-auto px-6 lg:px-8 pb-8 pt-6">
         {tab === "workspace" && <WorkspaceTab />}
         {tab === "followup" && <FollowUpTab />}
         {tab === "webhook" && <WebhookTab />}
