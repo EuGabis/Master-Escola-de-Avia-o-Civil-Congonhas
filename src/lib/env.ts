@@ -9,8 +9,9 @@ const envSchema = z.object({
   // Banco
   DATABASE_URL: z.string().url().startsWith("postgresql://"),
 
-  // Redis
-  REDIS_URL: z.string().min(1),
+  // Redis (Upstash REST — serverless friendly)
+  UPSTASH_REDIS_REST_URL: z.string().url(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
 
   // Seguranca
   JWT_SECRET: z.string().min(64, "JWT_SECRET deve ter pelo menos 64 caracteres"),
@@ -24,6 +25,12 @@ const envSchema = z.object({
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+
+  // Pusher Channels (realtime)
+  PUSHER_APP_ID: z.string().min(1),
+  PUSHER_SECRET: z.string().min(1),
+  NEXT_PUBLIC_PUSHER_KEY: z.string().min(1),
+  NEXT_PUBLIC_PUSHER_CLUSTER: z.string().min(1),
 
   // Sentry
   SENTRY_DSN: z.string().default(""),

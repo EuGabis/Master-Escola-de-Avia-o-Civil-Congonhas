@@ -13,8 +13,9 @@ export async function GET() {
     checks.db = true;
   } catch {}
   try {
-    const pong = await redis.ping();
-    checks.redis = pong === "PONG";
+    const key = `health:${Date.now()}`;
+    await redis.set(key, "ok", { ex: 10 });
+    checks.redis = (await redis.get(key)) === "ok";
   } catch {}
 
   const ok = checks.db && checks.redis;

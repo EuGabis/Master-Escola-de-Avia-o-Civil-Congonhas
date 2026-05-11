@@ -55,8 +55,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Rota protegida + nao logado: manda pro login
+  // Rota protegida + nao logado:
   if (!isPublic && !isAuthenticated) {
+    // API retorna 401 JSON (XHR nao segue redirect bem)
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    // Paginas: redireciona pro login com ?next=
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
