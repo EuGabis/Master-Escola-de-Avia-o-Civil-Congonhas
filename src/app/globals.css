@@ -2,26 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Master CRM — Tema (light + dark)
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f8fafc;          /* slate-50 */
+  --bg-elev: #ffffff;
+  --border: #e2e8f0;      /* slate-200 */
+  --text: #0f172a;        /* slate-900 */
+  --text-muted: #64748b;  /* slate-500 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.dark {
+  --bg: #020617;          /* slate-950 */
+  --bg-elev: #0f172a;     /* slate-900 */
+  --border: #1e293b;      /* slate-800 */
+  --text: #f1f5f9;        /* slate-100 */
+  --text-muted: #94a3b8;  /* slate-400 */
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Scrollbar customizada */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+
+  /* Selection laranja Master */
+  ::selection {
+    background: rgba(242, 101, 34, 0.25);
+  }
+
+  /* Focus ring laranja */
+  :focus-visible {
+    outline: 2px solid #F26522;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Glow laranja Master pros botoes principais */
+  .glow-master {
+    box-shadow: 0 0 0 0 rgba(242, 101, 34, 0.5);
+    transition: box-shadow 0.3s;
+  }
+  .glow-master:hover {
+    box-shadow: 0 8px 24px -6px rgba(242, 101, 34, 0.5);
+  }
+
+  /* Gradiente sutil pra hero/header */
+  .gradient-master {
+    background: linear-gradient(135deg, #F26522 0%, #D24E13 100%);
+  }
+  .gradient-master-navy {
+    background: linear-gradient(180deg, #1B2862 0%, #141E4A 100%);
+  }
+
+  /* Animacao de fade-in suave */
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
