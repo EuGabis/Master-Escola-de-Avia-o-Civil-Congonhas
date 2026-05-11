@@ -439,9 +439,12 @@ function CreateAgentModal({
             type="text"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="minimo 12 caracteres com maiuscula, minuscula e numero"
+            placeholder="mínimo 6 caracteres (qualquer combinação)"
             className="font-mono"
           />
+          <p className="text-[10px] text-slate-500 mt-1">
+            Você define a senha inicial. A pessoa pode trocar depois em <em>Minha conta</em>.
+          </p>
         </div>
         <div>
           <Label>Permissao</Label>

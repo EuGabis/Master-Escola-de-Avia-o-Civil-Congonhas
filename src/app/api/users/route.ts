@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { hashPassword, isPasswordStrong } from "@/lib/auth/password";
+import { hashPassword } from "@/lib/auth/password";
 import { audit } from "@/lib/auth/audit";
 import { getClientIp, getUserAgent } from "@/lib/auth/request";
 
@@ -34,7 +34,10 @@ export async function GET() {
 const createSchema = z.object({
   name: z.string().min(1).max(120),
   email: z.string().email().toLowerCase().trim(),
-  password: z.string().min(12).max(200),
+  // Sem politica forte aqui - admin escolhe livremente.
+  // Politica forte (12+ chars com U/l/n) eh aplicada APENAS quando o proprio
+  // usuario troca a senha em /configuracoes?tab=conta
+  password: z.string().min(6, "Senha precisa ter ao menos 6 caracteres").max(200),
   role: z.enum(["owner", "admin", "agent"]).default("agent"),
 });
 
@@ -56,13 +59,14 @@ export async function POST(req: NextRequest) {
   let body: z.infer<typeof createSchema>;
   try {
     body = createSchema.parse(await req.json());
-  } catch {
-    return NextResponse.json({ error: "Dados invalidos" }, { status: 400 });
+  } catch (err) {
+    // Retorna o erro do Zod pro frontend mostrar mensagem util
+    const message =
+      err instanceof z.ZodError
+        ? err.issues[0]?.message ?? "Dados invalidos"
+        : "Dados invalidos";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  const strong = isPasswordStrong(body.password);
-  if (!strong.ok)
-    return NextResponse.json({ error: strong.reason }, { status: 400 });
 
   const existing = await db.user.findUnique({ where: { email: body.email } });
   if (existing)
