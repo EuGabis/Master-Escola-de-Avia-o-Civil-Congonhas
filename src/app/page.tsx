@@ -30,14 +30,22 @@ export default async function HomePage() {
             <Row k="Role" v={user?.role ?? "-"} />
           </div>
 
-          <form action="/api/auth/logout" method="POST" className="mt-6">
-            <button
-              type="submit"
-              className="rounded-md bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 px-4 py-2 text-sm font-medium"
+          <div className="mt-6 flex gap-2">
+            <a
+              href="/inbox"
+              className="rounded-md bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium"
             >
-              Sair
-            </button>
-          </form>
+              Abrir Inbox
+            </a>
+            <form action="/api/auth/logout" method="POST" className="inline">
+              <button
+                type="submit"
+                className="rounded-md bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 px-4 py-2 text-sm font-medium"
+              >
+                Sair
+              </button>
+            </form>
+          </div>
 
           <p className="text-xs text-slate-400 mt-8">
             Esta tela e provisoria. Modulos do CRM (Inbox, Kanban, etc) serao
