@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RefreshCw, Plus, Search, Send, MessagesSquare } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { Modal, Button, Label } from "@/components/Modal";
+import { ConversationPanel } from "./ConversationPanel";
 
 type Status = "open" | "pending" | "resolved" | "all";
 
@@ -52,9 +52,6 @@ export default function ConversationsClient({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [pipelineOpen, setPipelineOpen] = useState(false);
-  const [pipelineCols, setPipelineCols] = useState<{ id: string; name: string; color: string }[]>([]);
-  const [pipelineMsg, setPipelineMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(async () => {
@@ -291,28 +288,58 @@ export default function ConversationsClient({
           </div>
         ) : (
           <>
-            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center gap-3">
+            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-sm font-bold">
                 {active.contact.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-slate-900 dark:text-white truncate">
-                  {active.contact.name}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-slate-900 dark:text-white truncate">
+                    {active.contact.name}
+                  </h2>
+                  <StatusBadge status={active.status} />
+                </div>
                 <p className="text-xs text-slate-500">{active.contact.phone}</p>
               </div>
               <button
                 onClick={async () => {
-                  const res = await fetch("/api/kanban");
-                  if (!res.ok) return;
-                  const data = await res.json();
-                  setPipelineCols(data.columns);
-                  setPipelineMsg(null);
-                  setPipelineOpen(true);
+                  await fetch(`/api/conversations/${active.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      status: active.status === "pending" ? "open" : "pending",
+                    }),
+                  });
+                  void loadConversations();
                 }}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-master-orange hover:text-master-orange transition text-slate-600 dark:text-slate-300"
+                className={cn(
+                  "text-xs font-medium px-3 py-1.5 rounded-lg border transition",
+                  active.status === "pending"
+                    ? "bg-amber-500 text-white border-amber-500"
+                    : "border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                )}
               >
-                + Pipeline
+                Pendente
+              </button>
+              <button
+                onClick={async () => {
+                  await fetch(`/api/conversations/${active.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      status: active.status === "resolved" ? "open" : "resolved",
+                    }),
+                  });
+                  void loadConversations();
+                }}
+                className={cn(
+                  "text-xs font-medium px-3 py-1.5 rounded-lg border transition",
+                  active.status === "resolved"
+                    ? "bg-emerald-500 text-white border-emerald-500"
+                    : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                )}
+              >
+                {active.status === "resolved" ? "Resolvida" : "Resolver"}
               </button>
             </header>
 
@@ -380,68 +407,29 @@ export default function ConversationsClient({
         )}
       </section>
 
-      {/* Modal: adicionar ao Pipeline */}
-      <Modal
-        open={pipelineOpen}
-        onClose={() => setPipelineOpen(false)}
-        title="Adicionar ao Pipeline"
-        description={active ? `${active.contact.name} sera vinculado(a) ao card` : ""}
-      >
-        {pipelineMsg && (
-          <div className="mb-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm">
-            {pipelineMsg}
-          </div>
-        )}
-        {pipelineCols.length === 0 ? (
-          <p className="text-sm text-slate-500">
-            Nenhuma coluna ainda. Crie em /pipeline.
-          </p>
-        ) : (
-          <>
-            <Label>Escolha a coluna</Label>
-            <div className="space-y-1">
-              {pipelineCols.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={async () => {
-                    if (!active) return;
-                    const r = await fetch("/api/kanban/cards", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        columnId: c.id,
-                        conversationId: active.id,
-                        title: active.contact.name,
-                      }),
-                    });
-                    const data = await r.json();
-                    if (!r.ok) {
-                      setPipelineMsg(data.error ?? "Erro");
-                    } else {
-                      setPipelineMsg(`Adicionado em "${c.name}"!`);
-                      setTimeout(() => setPipelineOpen(false), 1200);
-                    }
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-master-orange hover:bg-master-orange/5 transition text-left"
-                >
-                  <span
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: c.color }}
-                  />
-                  <span className="text-sm font-medium text-slate-900 dark:text-white flex-1">
-                    {c.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        <div className="mt-4 flex justify-end">
-          <Button variant="ghost" onClick={() => setPipelineOpen(false)}>
-            Fechar
-          </Button>
-        </div>
-      </Modal>
+      {/* PAINEL DIREITO - detalhes da conversa */}
+      {active && (
+        <ConversationPanel
+          conversationId={active.id}
+          onChange={loadConversations}
+        />
+      )}
+
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map = {
+    open: { label: "Aberta", color: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" },
+    pending: { label: "Pendente", color: "bg-amber-500/15 text-amber-600 dark:text-amber-300" },
+    resolved: { label: "Resolvida", color: "bg-slate-300/30 text-slate-600 dark:text-slate-400" },
+    snoozed: { label: "Adiada", color: "bg-blue-500/15 text-blue-600 dark:text-blue-300" },
+  } as const;
+  const s = map[status as keyof typeof map] ?? map.open;
+  return (
+    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded uppercase tracking-wider", s.color)}>
+      {s.label}
+    </span>
   );
 }
