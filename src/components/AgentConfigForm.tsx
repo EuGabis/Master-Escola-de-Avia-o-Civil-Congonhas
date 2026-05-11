@@ -103,7 +103,7 @@ export function AgentConfigForm() {
 
       {/* API Key */}
       <div>
-        <Label>Anthropic API Key</Label>
+        <Label>API Key (OpenAI ou Anthropic)</Label>
         <div className="flex gap-2">
           <Input
             type="password"
@@ -171,7 +171,15 @@ export function AgentConfigForm() {
 
       {/* System prompt */}
       <div>
-        <Label>System Prompt (instrucoes do agente)</Label>
+        <div className="flex items-center justify-between mb-1.5">
+          <Label>System Prompt (instrucoes do agente)</Label>
+          <PromptSaveButton
+            value={cfg.systemPrompt}
+            onSave={async (v) => {
+              await save({ systemPrompt: v });
+            }}
+          />
+        </div>
         <Textarea
           rows={10}
           value={cfg.systemPrompt}
@@ -180,8 +188,8 @@ export function AgentConfigForm() {
           className="font-mono text-xs"
         />
         <p className="text-[10px] text-slate-500 mt-1">
-          Salva automaticamente ao sair do campo. Personalize tom de voz, limites
-          de informacao, etc.
+          Personalize tom de voz, limites de informacao, etc. Salva ao clicar
+          em <strong>Salvar prompt</strong> ou ao sair do campo.
         </p>
       </div>
 
@@ -271,5 +279,39 @@ export function AgentConfigForm() {
             : ""}
       </div>
     </div>
+  );
+}
+
+function PromptSaveButton({
+  value,
+  onSave,
+}: {
+  value: string;
+  onSave: (v: string) => Promise<void>;
+}) {
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        setState("saving");
+        await onSave(value);
+        setState("saved");
+        setTimeout(() => setState("idle"), 1500);
+      }}
+      disabled={state === "saving"}
+      className={cn(
+        "text-xs font-medium px-2.5 py-1 rounded-lg transition flex items-center gap-1.5",
+        state === "saved"
+          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+          : "bg-master-orange hover:bg-master-orange-600 text-white"
+      )}
+    >
+      {state === "saving"
+        ? "Salvando..."
+        : state === "saved"
+          ? "✓ Salvo"
+          : "Salvar prompt"}
+    </button>
   );
 }
