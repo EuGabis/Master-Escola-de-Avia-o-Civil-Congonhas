@@ -17,13 +17,17 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(64, "JWT_SECRET deve ter pelo menos 64 caracteres"),
   WEBHOOK_SECRET: z.string().min(32, "WEBHOOK_SECRET deve ter pelo menos 32 caracteres"),
 
-  // Evolution API
-  EVOLUTION_API_URL: z.string().url().or(z.literal("")),
-  EVOLUTION_API_KEY: z.string().default(""),
-  EVOLUTION_INSTANCE_NAME: z.string().default(""),
+  // Evolution API (opcionais ate configurar)
+  EVOLUTION_API_URL: z
+    .union([z.string().url(), z.literal(""), z.undefined()])
+    .transform((v) => v ?? ""),
+  EVOLUTION_API_KEY: z.string().optional().default(""),
+  EVOLUTION_INSTANCE_NAME: z.string().optional().default(""),
 
-  // App
-  NEXT_PUBLIC_APP_URL: z.string().url(),
+  // App (URL publica; aceita vazio em build, usado em runtime)
+  NEXT_PUBLIC_APP_URL: z
+    .union([z.string().url(), z.literal(""), z.undefined()])
+    .transform((v) => v ?? ""),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
   // Pusher Channels (realtime)
@@ -33,8 +37,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_PUSHER_CLUSTER: z.string().min(1),
 
   // Sentry
-  SENTRY_DSN: z.string().default(""),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().default(""),
+  SENTRY_DSN: z.string().optional().default(""),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().optional().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);
