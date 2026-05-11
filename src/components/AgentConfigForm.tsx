@@ -19,9 +19,14 @@ interface Config {
 }
 
 const MODELS = [
-  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (rapido, barato)" },
-  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 (equilibrado)" },
-  { id: "claude-opus-4-7", label: "Claude Opus 4.7 (mais inteligente)" },
+  // OpenAI
+  { id: "gpt-4o-mini", label: "GPT-4o Mini (OpenAI, barato)", group: "OpenAI" },
+  { id: "gpt-4o", label: "GPT-4o (OpenAI, equilibrado)", group: "OpenAI" },
+  { id: "gpt-4-turbo", label: "GPT-4 Turbo (OpenAI)", group: "OpenAI" },
+  // Anthropic
+  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (Anthropic, barato)", group: "Anthropic" },
+  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 (Anthropic, equilibrado)", group: "Anthropic" },
+  { id: "claude-opus-4-7", label: "Claude Opus 4.7 (Anthropic, top)", group: "Anthropic" },
 ];
 
 export function AgentConfigForm() {
@@ -143,15 +148,24 @@ export function AgentConfigForm() {
           onChange={(e) => void save({ model: e.target.value })}
           className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange"
         >
-          {MODELS.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
+          <optgroup label="OpenAI (chave sk-...)">
+            {MODELS.filter((m) => m.group === "OpenAI").map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Anthropic Claude (chave sk-ant-...)">
+            {MODELS.filter((m) => m.group === "Anthropic").map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
         </select>
         <p className="text-[10px] text-slate-500 mt-1">
-          Haiku eh o mais barato (~10x menos que Sonnet). Use Sonnet/Opus apenas
-          se respostas estiverem ruins.
+          O sistema detecta o provedor pela sua chave automaticamente. Escolha um
+          modelo compativel com sua chave (OpenAI sk-... ou Anthropic sk-ant-...).
         </p>
       </div>
 

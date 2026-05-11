@@ -1,20 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { db } from "@/lib/db";
 
 /**
- * Cliente do Claude (Anthropic).
+ * Camada de IA - suporta Anthropic Claude OU OpenAI GPT.
+ * Detecta provedor pelo prefixo da apiKey:
+ *   - sk-ant-...           -> Anthropic
+ *   - sk-... | sk-proj-... -> OpenAI
  *
- * USO:
- *   const reply = await generateAIReply({
- *     workspaceId,
- *     conversationId,
- *     systemPromptOverride: "..."  (opcional)
- *   });
- *
- * Retorna texto da resposta + tokens usados.
- * Atualiza AgentConfig.tokensUsedMonth automaticamente.
- *
- * Modelo padrao: Claude Haiku 4.5 (rapido e barato; configuravel por workspace).
+ * Mesma interface, mesma config, contabiliza tokens igual.
  */
 
 interface GenerateInput {
@@ -45,6 +39,12 @@ Diretrizes:
 - Nao prometa nada que dependa de aprovacao
 - Use no maximo 1 emoji por resposta`;
 
+function detectProvider(apiKey: string): "anthropic" | "openai" | null {
+  if (apiKey.startsWith("sk-ant-")) return "anthropic";
+  if (apiKey.startsWith("sk-")) return "openai";
+  return null;
+}
+
 export async function generateAIReply(
   input: GenerateInput
 ): Promise<GenerateOutput | null> {
@@ -53,15 +53,17 @@ export async function generateAIReply(
   });
   if (!cfg || !cfg.enabled || !cfg.apiKey) return null;
 
-  // Verifica limite mensal (se configurado)
   if (cfg.tokenAlertThreshold && cfg.tokensUsedMonth >= cfg.tokenAlertThreshold) {
-    console.warn(
-      `[ai] limite mensal atingido para workspace ${input.workspaceId}`
-    );
+    console.warn(`[ai] limite mensal atingido (workspace ${input.workspaceId})`);
     return null;
   }
 
-  // Pega historico recente (max 20 mensagens)
+  const provider = detectProvider(cfg.apiKey);
+  if (!provider) {
+    console.error("[ai] api key invalida (prefixo desconhecido)");
+    return null;
+  }
+
   const messages = await db.message.findMany({
     where: { conversationId: input.conversationId },
     orderBy: { timestamp: "asc" },
@@ -71,41 +73,59 @@ export async function generateAIReply(
 
   if (messages.length === 0) return null;
 
-  // Converte pra formato Anthropic (user / assistant)
   const history = messages.map((m) => ({
     role: m.direction === "in" ? ("user" as const) : ("assistant" as const),
     content: m.content,
   }));
-
-  // Garante que comeca com user (caso a primeira seja assistant)
   const trimmed = history[0]?.role === "assistant" ? history.slice(1) : history;
-  if (trimmed.length === 0) return null;
+  if (trimmed.length === 0 || trimmed[trimmed.length - 1]!.role !== "user") return null;
 
-  // Garante que termina com user (a IA so responde apos input do usuario)
-  if (trimmed[trimmed.length - 1]!.role !== "user") return null;
+  const systemPrompt = cfg.systemPrompt || DEFAULT_SYSTEM;
+  const model = cfg.model || (provider === "anthropic" ? "claude-haiku-4-5-20251001" : "gpt-4o-mini");
 
-  const client = new Anthropic({ apiKey: cfg.apiKey });
+  let result: GenerateOutput | null = null;
 
   try {
-    const response = await client.messages.create({
-      model: cfg.model || "claude-haiku-4-5-20251001",
-      max_tokens: 500,
-      system: cfg.systemPrompt || DEFAULT_SYSTEM,
-      messages: trimmed,
-    });
+    if (provider === "anthropic") {
+      const client = new Anthropic({ apiKey: cfg.apiKey });
+      const response = await client.messages.create({
+        model,
+        max_tokens: 500,
+        system: systemPrompt,
+        messages: trimmed,
+      });
+      const text =
+        response.content
+          .filter((b) => b.type === "text")
+          .map((b) => (b.type === "text" ? b.text : ""))
+          .join("\n")
+          .trim() || "";
+      result = {
+        text,
+        tokensIn: response.usage.input_tokens,
+        tokensOut: response.usage.output_tokens,
+      };
+    } else {
+      const client = new OpenAI({ apiKey: cfg.apiKey });
+      const response = await client.chat.completions.create({
+        model,
+        max_tokens: 500,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...trimmed,
+        ],
+      });
+      const text = response.choices[0]?.message?.content?.trim() || "";
+      result = {
+        text,
+        tokensIn: response.usage?.prompt_tokens ?? 0,
+        tokensOut: response.usage?.completion_tokens ?? 0,
+      };
+    }
 
-    const text =
-      response.content
-        .filter((b) => b.type === "text")
-        .map((b) => (b.type === "text" ? b.text : ""))
-        .join("\n")
-        .trim() || "";
+    if (!result || !result.text) return null;
 
-    const tokensIn = response.usage.input_tokens;
-    const tokensOut = response.usage.output_tokens;
-    const total = tokensIn + tokensOut;
-
-    // Atualiza contadores
+    const total = result.tokensIn + result.tokensOut;
     await db.agentConfig.update({
       where: { workspaceId: input.workspaceId },
       data: {
@@ -115,18 +135,13 @@ export async function generateAIReply(
         lastTokenUsageAt: new Date(),
       },
     });
-
-    return { text, tokensIn, tokensOut };
+    return result;
   } catch (err) {
-    console.error("[ai] erro Anthropic:", err);
+    console.error(`[ai] erro ${provider}:`, err);
     return null;
   }
 }
 
-/**
- * Detecta comando de stop ("/humano" por padrao) nas mensagens do contato.
- * Se detectado, desabilita aiEnabled na conversa.
- */
 export async function checkStopCommand(
   workspaceId: string,
   conversationId: string,

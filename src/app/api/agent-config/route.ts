@@ -34,7 +34,7 @@ export async function GET() {
         enabled: false,
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         stopCommand: "/humano",
-        model: "claude-haiku-4-5-20251001",
+        model: "gpt-4o-mini",
       },
     });
   }
