@@ -70,15 +70,19 @@ model User {
 // ============================================================
 
 model Contact {
-  id          String   @id @default(cuid())
-  workspaceId String
-  name        String
-  phone       String
-  email       String?
-  avatar      String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  workspaceId    String
+  name           String
+  phone          String
+  email          String?
+  avatar         String?
+  notes          String?
+  // Extras pro CRM escolar
+  courseInterest String?  // PP | PC | Comissario | INVA | outro
+  source         String?  // website | indicacao | instagram | google | outro
+  status         String   @default("lead") // lead | aluno | ex_aluno | perdido
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   conversations Conversation[]
@@ -86,6 +90,8 @@ model Contact {
   @@unique([workspaceId, phone])
   @@index([workspaceId])
   @@index([phone])
+  @@index([workspaceId, status])
+  @@index([workspaceId, courseInterest])
 }
 
 model Conversation {
