@@ -278,7 +278,7 @@ export default function ConversationsClient({
   }
 
   return (
-    <div className="h-full flex bg-slate-100 dark:bg-slate-950">
+    <div className="h-full flex bg-slate-100 dark:bg-slate-950 min-w-0 overflow-hidden">
       {/* COLUNA: Lista de conversas
           Mobile: visível só quando nenhuma conversa selecionada
           Desktop: sempre visível, largura fixa */}
@@ -400,7 +400,7 @@ export default function ConversationsClient({
           Desktop: sempre visível, flex-1 */}
       <section
         className={cn(
-          "flex-1 flex-col bg-slate-50 dark:bg-slate-950",
+          "flex-1 min-w-0 flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden",
           activeId ? "flex" : "hidden md:flex"
         )}
       >
