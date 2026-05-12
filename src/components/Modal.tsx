@@ -49,7 +49,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -58,13 +58,15 @@ export function Modal({
       <div
         ref={ref}
         className={cn(
-          "relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full overflow-hidden",
+          "relative bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-h-[90vh] flex flex-col overflow-hidden",
+          // Mobile: bottom sheet com cantos arredondados no topo
+          "rounded-t-2xl sm:rounded-2xl",
           sizeClass
         )}
       >
-        <header className="flex items-start justify-between gap-4 p-5 border-b border-slate-100 dark:border-slate-800">
+        <header className="flex items-start justify-between gap-4 p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="min-w-0">
-            <h2 className="font-semibold text-slate-900 dark:text-white">
+            <h2 className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">
               {title}
             </h2>
             {description && (
@@ -73,14 +75,15 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition shrink-0"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition shrink-0"
+            aria-label="Fechar"
           >
             <X size={18} />
           </button>
         </header>
-        <div className="p-5">{children}</div>
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1">{children}</div>
         {footer && (
-          <footer className="px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+          <footer className="px-4 sm:px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 shrink-0 flex-wrap">
             {footer}
           </footer>
         )}

@@ -284,12 +284,12 @@ export default function ConversationsClient({
           Desktop: sempre visível, largura fixa */}
       <section
         className={cn(
-          "bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col",
+          "bg-white dark:bg-slate-900 md:border-r border-slate-200 dark:border-slate-800 flex flex-col min-w-0",
           "md:w-96 md:shrink-0",
           activeId ? "hidden md:flex w-full" : "flex w-full md:w-96"
         )}
       >
-        <header className="px-5 py-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        <header className="px-4 md:px-5 py-3 md:py-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <h1 className="font-bold text-slate-900 dark:text-white text-lg">
             Conversas <span className="text-slate-400 text-sm">{counts[tab]}</span>
           </h1>

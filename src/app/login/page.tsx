@@ -40,7 +40,7 @@ function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 space-y-5 border border-slate-100 dark:border-slate-700"
+      className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5 border border-slate-100 dark:border-slate-700"
     >
       <div className="text-center space-y-3">
         <Logo size="lg" />

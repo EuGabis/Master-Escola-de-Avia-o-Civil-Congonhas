@@ -108,24 +108,25 @@ export default function PipelineClient() {
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950">
       {/* HEADER */}
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 lg:px-8 py-4 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between gap-2 shrink-0">
+        <div className="min-w-0">
+          <h1 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
             Pipeline
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Arraste cards entre colunas · {columns.length} colunas · {totalCards} cards
+          <p className="text-xs text-slate-500 mt-0.5 truncate">
+            {columns.length} colunas · {totalCards} cards
           </p>
         </div>
         <Button onClick={() => setColumnModal({ mode: "create" })}>
           <span className="flex items-center gap-2">
-            <Plus size={16} /> Nova coluna
+            <Plus size={16} />
+            <span className="hidden sm:inline">Nova coluna</span>
           </span>
         </Button>
       </header>
 
       {/* BOARD */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-3 md:p-6">
         {loading ? (
           <p className="text-sm text-slate-500">Carregando...</p>
         ) : (
@@ -150,7 +151,7 @@ export default function PipelineClient() {
                     setDragging(null);
                   }}
                   className={cn(
-                    "w-72 shrink-0 flex flex-col rounded-xl border bg-white dark:bg-slate-900 transition",
+                    "w-[280px] sm:w-72 shrink-0 flex flex-col rounded-xl border bg-white dark:bg-slate-900 transition",
                     hoverCol === col.id
                       ? "border-master-orange ring-2 ring-master-orange/20"
                       : "border-slate-200 dark:border-slate-800"
@@ -288,7 +289,7 @@ export default function PipelineClient() {
             {/* + nova coluna no fim */}
             <button
               onClick={() => setColumnModal({ mode: "create" })}
-              className="w-72 shrink-0 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-master-orange hover:text-master-orange text-slate-400 transition flex items-center justify-center gap-2 text-sm font-medium"
+              className="w-[280px] sm:w-72 shrink-0 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-master-orange hover:text-master-orange text-slate-400 transition flex items-center justify-center gap-2 text-sm font-medium"
             >
               <Plus size={16} /> Nova coluna
             </button>

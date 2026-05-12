@@ -191,7 +191,7 @@ export default function ContatosClient() {
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-4 md:py-6 space-y-4">
         {/* BUSCA + FILTROS */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex flex-wrap items-center gap-2">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
           <div className="flex-1 min-w-[200px] flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
             <Search size={14} className="text-slate-400 shrink-0" />
             <input
@@ -209,39 +209,41 @@ export default function ContatosClient() {
               </button>
             )}
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
-          >
-            <option value="">Todos os status</option>
-            {STATUS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            className="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
-          >
-            <option value="">Todos os cursos</option>
-            {COURSES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            value={hasConvFilter}
-            onChange={(e) => setHasConvFilter(e.target.value)}
-            className="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white"
-          >
-            <option value="">Todos</option>
-            <option value="yes">Com conversa</option>
-            <option value="no">Sem conversa</option>
-          </select>
+          <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 sm:contents">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white min-w-0"
+            >
+              <option value="">Status</option>
+              {STATUS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white min-w-0"
+            >
+              <option value="">Curso</option>
+              {COURSES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              value={hasConvFilter}
+              onChange={(e) => setHasConvFilter(e.target.value)}
+              className="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white min-w-0"
+            >
+              <option value="">Convs</option>
+              <option value="yes">Com</option>
+              <option value="no">Sem</option>
+            </select>
+          </div>
           {hasFilters && (
             <button
               onClick={() => {
@@ -616,8 +618,8 @@ function ContactFormModal({
             {error}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
             <Label>Nome completo</Label>
             <Input
               value={name}
@@ -675,9 +677,9 @@ function ContactFormModal({
               ))}
             </select>
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <Label>Status</Label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {STATUS.map((s) => (
                 <button
                   key={s.key}
@@ -696,7 +698,7 @@ function ContactFormModal({
               ))}
             </div>
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <Label>Notas internas</Label>
             <Textarea
               rows={3}
