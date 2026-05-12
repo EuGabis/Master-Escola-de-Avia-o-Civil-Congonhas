@@ -85,13 +85,13 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "h-screen flex flex-col gradient-master-navy text-slate-100 transition-transform duration-200 ease-out shrink-0 relative z-50",
-          // Desktop: largura normal/collapsed
-          "md:translate-x-0",
-          collapsed ? "md:w-[68px]" : "md:w-64",
-          // Mobile: fixed drawer
-          "fixed inset-y-0 left-0 w-72 md:relative md:w-auto",
-          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "h-screen flex flex-col gradient-master-navy text-slate-100 transition-transform duration-200 ease-out z-50",
+          // Mobile: drawer fixed slide-in
+          "fixed inset-y-0 left-0 w-72",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop: volta pro fluxo normal e ocupa espaco no flex
+          "md:relative md:translate-x-0 md:shrink-0",
+          collapsed ? "md:w-[68px]" : "md:w-64"
         )}
       >
         {/* LOGO + close mobile */}
