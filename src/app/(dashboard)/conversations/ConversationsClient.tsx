@@ -491,7 +491,7 @@ export default function ConversationsClient({
               </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-2">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 space-y-2">
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -502,7 +502,7 @@ export default function ConversationsClient({
                 >
                   <div
                     className={cn(
-                      "max-w-lg rounded-2xl px-4 py-2 shadow-sm",
+                      "max-w-[80%] sm:max-w-[70%] md:max-w-lg rounded-2xl px-4 py-2 shadow-sm min-w-0",
                       m.direction === "out"
                         ? "bg-master-orange text-white"
                         : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
