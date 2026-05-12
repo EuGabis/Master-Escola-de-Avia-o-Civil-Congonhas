@@ -575,7 +575,7 @@ export default function ConversationsClient({
 
             <form
               onSubmit={handleSend}
-              className="relative p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
+              className="relative p-2 md:p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-1.5 md:gap-2 min-w-0"
             >
               <input
                 ref={fileInputRef}
@@ -591,8 +591,9 @@ export default function ConversationsClient({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || sending}
-                className="shrink-0 p-2.5 rounded-full text-slate-500 hover:text-master-orange hover:bg-master-orange/10 transition disabled:opacity-50"
+                className="shrink-0 p-2 md:p-2.5 rounded-full text-slate-500 hover:text-master-orange hover:bg-master-orange/10 transition disabled:opacity-50"
                 title="Anexar arquivo (imagem, video, audio, doc - max 15MB)"
+                aria-label="Anexar arquivo"
               >
                 {uploading ? (
                   <span className="block w-5 h-5 border-2 border-master-orange border-t-transparent rounded-full animate-spin" />
@@ -608,21 +609,20 @@ export default function ConversationsClient({
                 }}
                 placeholder={
                   uploading
-                    ? "Enviando arquivo..."
-                    : quickReplies.length > 0
-                      ? "Digite uma mensagem ou / para respostas rápidas"
-                      : "Digite uma mensagem..."
+                    ? "Enviando..."
+                    : "Digite uma mensagem..."
                 }
                 disabled={sending || uploading}
-                className="flex-1 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
+                className="flex-1 min-w-0 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 md:px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
               />
               <button
                 type="submit"
                 disabled={sending || uploading || !input.trim()}
-                className="rounded-pill bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium px-6 flex items-center gap-2 shrink-0"
+                className="rounded-full md:rounded-pill bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium p-2.5 md:px-6 md:py-2.5 flex items-center gap-2 shrink-0"
+                aria-label="Enviar mensagem"
               >
                 <Send size={16} />
-                {sending ? "..." : "Enviar"}
+                <span className="hidden md:inline">{sending ? "..." : "Enviar"}</span>
               </button>
             </form>
           </>
