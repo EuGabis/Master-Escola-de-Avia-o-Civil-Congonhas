@@ -75,7 +75,14 @@ export function MyAccountTab() {
       setCurrent("");
       setNext("");
       setConfirm("");
-      setTimeout(() => setPwdSaved(false), 3000);
+      // Senha trocada -> servidor destruiu sessao, redireciona pro login
+      if (data.reauth) {
+        setTimeout(() => {
+          window.location.href = "/login?next=/configuracoes?tab=conta";
+        }, 1500);
+      } else {
+        setTimeout(() => setPwdSaved(false), 3000);
+      }
     } else {
       setPwdError(data.error ?? "Erro");
     }

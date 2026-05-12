@@ -4,6 +4,9 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { sendMedia } from "@/lib/evolution";
 import { pusher, channels, events as ev } from "@/lib/pusher";
+import { validateMediaDataUrl } from "@/lib/security";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { getClientIp } from "@/lib/auth/request";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,15 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
 
+  // Rate limit por usuario - 20 uploads por minuto
+  const rl = await checkRateLimit(`media:${session.uid}`, 20, 60);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Muitos uploads. Aguarde alguns segundos." },
+      { status: 429 }
+    );
+  }
+
   const conv = await db.conversation.findFirst({
     where: { id, workspaceId: session.wid },
     include: { contact: true },
@@ -38,6 +50,14 @@ export async function POST(
       { status: 400 }
     );
   }
+
+  // Valida MIME type real do conteudo base64 (anti-bypass de extensao)
+  const mimeCheck = validateMediaDataUrl(body.mediaDataUrl, body.mediaType);
+  if (!mimeCheck.ok) {
+    return NextResponse.json({ error: mimeCheck.reason }, { status: 400 });
+  }
+  // _ip kept for future audit/logging
+  void getClientIp(req);
 
   // Envia via Evolution
   let evolutionId: string | undefined;

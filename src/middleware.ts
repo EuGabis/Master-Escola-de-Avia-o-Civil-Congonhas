@@ -76,13 +76,32 @@ export async function middleware(req: NextRequest) {
   res.headers.set("X-DNS-Prefetch-Control", "off");
   res.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
   );
+  res.headers.set("X-XSS-Protection", "1; mode=block");
+  res.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+
   if (process.env.NODE_ENV === "production") {
     res.headers.set(
       "Strict-Transport-Security",
       "max-age=63072000; includeSubDomains; preload"
     );
+    // CSP - apenas em prod (dev tem hot reload com inline scripts)
+    // Nao bloqueia Pusher (ws://*.pusher.com) nem APIs externas usadas
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.pusher.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "media-src 'self' data: blob:",
+      "connect-src 'self' https: wss://*.pusher.com https://*.pusher.com https://*.sentry.io https://*.ingest.sentry.io",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+    res.headers.set("Content-Security-Policy", csp);
   }
 
   return res;

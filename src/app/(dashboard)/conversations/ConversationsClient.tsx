@@ -5,10 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { getPusherClient, disconnectPusher } from "@/lib/pusher-client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, Plus, Search, Send, MessagesSquare, Paperclip, Image as ImageIcon, File as FileIcon } from "lucide-react";
+import { RefreshCw, Plus, Search, Send, MessagesSquare, Paperclip, Zap } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ConversationPanel } from "./ConversationPanel";
 import { MessageMedia } from "@/components/MessageMedia";
+import { useToast } from "@/components/Toast";
+import { compressImage } from "@/lib/compress";
 
 type Status = "open" | "pending" | "resolved" | "all";
 
@@ -57,8 +59,40 @@ export default function ConversationsClient({
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [quickReplies, setQuickReplies] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
+
+  useEffect(() => {
+    fetch("/api/quick-replies")
+      .then((r) => r.json())
+      .then((d) => setQuickReplies(d.items ?? []))
+      .catch(() => null);
+  }, []);
+
+  useEffect(() => {
+    setShowQuickReplies(input.startsWith("/") && quickReplies.length > 0);
+  }, [input, quickReplies.length]);
+
+  const filteredQuickReplies = useMemo(() => {
+    if (!showQuickReplies) return [];
+    const q = input.slice(1).toLowerCase().trim();
+    return quickReplies
+      .filter(
+        (qr) =>
+          !q ||
+          qr.title.toLowerCase().includes(q) ||
+          qr.content.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  }, [showQuickReplies, input, quickReplies]);
+
+  function applyQuickReply(qr: { content: string }) {
+    setInput(qr.content);
+    setShowQuickReplies(false);
+  }
 
   const loadConversations = useCallback(async () => {
     setRefreshing(true);
@@ -180,24 +214,35 @@ export default function ConversationsClient({
 
   async function handleFileUpload(file: File) {
     if (!activeId || uploading) return;
-    if (file.size > 15 * 1024 * 1024) {
-      alert("Arquivo muito grande. Máximo 15 MB.");
-      return;
-    }
     setUploading(true);
     try {
+      // Comprime imagens (reduz tamanho do upload)
+      let processed = file;
+      if (file.type.startsWith("image/")) {
+        try {
+          processed = await compressImage(file);
+        } catch {
+          processed = file;
+        }
+      }
+
+      if (processed.size > 15 * 1024 * 1024) {
+        toast.error("Arquivo muito grande", "Maximo 15 MB. Tente comprimir antes.");
+        return;
+      }
+
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(processed);
       });
 
-      const mediaType: "image" | "video" | "audio" | "document" = file.type.startsWith("image/")
+      const mediaType: "image" | "video" | "audio" | "document" = processed.type.startsWith("image/")
         ? "image"
-        : file.type.startsWith("video/")
+        : processed.type.startsWith("video/")
           ? "video"
-          : file.type.startsWith("audio/")
+          : processed.type.startsWith("audio/")
             ? "audio"
             : "document";
 
@@ -207,15 +252,23 @@ export default function ConversationsClient({
         body: JSON.stringify({
           mediaType,
           mediaDataUrl: dataUrl,
-          fileName: file.name,
+          fileName: processed.name,
           caption: input.trim() || undefined,
         }),
       });
       if (res.ok) {
         setInput("");
+        if (processed.size < file.size) {
+          toast.success(
+            "Arquivo enviado",
+            `Imagem otimizada: ${(file.size / 1024 / 1024).toFixed(1)}MB -> ${(processed.size / 1024 / 1024).toFixed(1)}MB`
+          );
+        } else {
+          toast.success("Arquivo enviado");
+        }
       } else {
         const data = await res.json();
-        alert(data.error ?? "Falha ao enviar arquivo");
+        toast.error("Falha ao enviar", data.error ?? "Tente novamente");
       }
     } finally {
       setUploading(false);
@@ -457,9 +510,40 @@ export default function ConversationsClient({
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Autocomplete de Quick Replies (aparece quando digita '/') */}
+            {showQuickReplies && filteredQuickReplies.length > 0 && (
+              <div className="absolute bottom-[72px] left-0 right-0 mx-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden z-10 max-w-md">
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100 dark:border-slate-700 flex items-center gap-1.5">
+                  <Zap size={11} className="text-master-orange" />
+                  Respostas rápidas
+                </div>
+                <ul className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {filteredQuickReplies.map((qr) => (
+                    <li key={qr.id}>
+                      <button
+                        type="button"
+                        onClick={() => applyQuickReply(qr)}
+                        className="w-full text-left px-3 py-2 hover:bg-master-orange/5 transition"
+                      >
+                        <div className="text-sm font-medium text-slate-900 dark:text-white">
+                          {qr.title}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {qr.content}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="px-3 py-1.5 text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700">
+                  Clique pra inserir · Esc fecha
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={handleSend}
-              className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
+              className="relative p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
             >
               <input
                 ref={fileInputRef}
@@ -487,7 +571,16 @@ export default function ConversationsClient({
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={uploading ? "Enviando arquivo..." : "Digite uma mensagem..."}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setShowQuickReplies(false);
+                }}
+                placeholder={
+                  uploading
+                    ? "Enviando arquivo..."
+                    : quickReplies.length > 0
+                      ? "Digite uma mensagem ou / para respostas rápidas"
+                      : "Digite uma mensagem..."
+                }
                 disabled={sending || uploading}
                 className="flex-1 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
               />
