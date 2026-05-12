@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { getPusherClient, disconnectPusher } from "@/lib/pusher-client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, Plus, Search, Send, MessagesSquare, Paperclip, Zap } from "lucide-react";
+import { RefreshCw, Plus, Search, Send, MessagesSquare, Paperclip, Zap, ChevronLeft, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ConversationPanel } from "./ConversationPanel";
 import { MessageMedia } from "@/components/MessageMedia";
@@ -61,6 +61,7 @@ export default function ConversationsClient({
   const [uploading, setUploading] = useState(false);
   const [quickReplies, setQuickReplies] = useState<{ id: string; title: string; content: string }[]>([]);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [mobileShowPanel, setMobileShowPanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -278,8 +279,16 @@ export default function ConversationsClient({
 
   return (
     <div className="h-full flex bg-slate-100 dark:bg-slate-950">
-      {/* COLUNA: Lista de conversas */}
-      <section className="w-96 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
+      {/* COLUNA: Lista de conversas
+          Mobile: visível só quando nenhuma conversa selecionada
+          Desktop: sempre visível, largura fixa */}
+      <section
+        className={cn(
+          "bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col",
+          "md:w-96 md:shrink-0",
+          activeId ? "hidden md:flex w-full" : "flex w-full md:w-96"
+        )}
+      >
         <header className="px-5 py-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <h1 className="font-bold text-slate-900 dark:text-white text-lg">
             Conversas <span className="text-slate-400 text-sm">{counts[tab]}</span>
@@ -386,8 +395,15 @@ export default function ConversationsClient({
         </div>
       </section>
 
-      {/* COLUNA: Chat ativo */}
-      <section className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950">
+      {/* COLUNA: Chat ativo
+          Mobile: visível só quando há conversa selecionada
+          Desktop: sempre visível, flex-1 */}
+      <section
+        className={cn(
+          "flex-1 flex-col bg-slate-50 dark:bg-slate-950",
+          activeId ? "flex" : "hidden md:flex"
+        )}
+      >
         {!active ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-3">
             <div className="w-16 h-16 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center">
@@ -404,19 +420,35 @@ export default function ConversationsClient({
           </div>
         ) : (
           <>
-            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-sm font-bold">
+            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 md:px-6 py-3 flex items-center gap-2 md:gap-3">
+              {/* Voltar (mobile only) */}
+              <button
+                onClick={() => setActiveId(null)}
+                className="md:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition shrink-0"
+                aria-label="Voltar"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-sm font-bold shrink-0">
                 {active.contact.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="font-semibold text-slate-900 dark:text-white truncate">
                     {active.contact.name}
                   </h2>
                   <StatusBadge status={active.status} />
                 </div>
-                <p className="text-xs text-slate-500">{active.contact.phone}</p>
+                <p className="text-xs text-slate-500 truncate">{active.contact.phone}</p>
               </div>
+              {/* Info button mobile -> abre painel direito */}
+              <button
+                onClick={() => setMobileShowPanel(true)}
+                className="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition shrink-0"
+                aria-label="Detalhes"
+              >
+                <Info size={18} />
+              </button>
               <button
                 onClick={async () => {
                   await fetch(`/api/conversations/${active.id}`, {
@@ -429,7 +461,7 @@ export default function ConversationsClient({
                   void loadConversations();
                 }}
                 className={cn(
-                  "text-xs font-medium px-3 py-1.5 rounded-lg border transition",
+                  "hidden md:inline-block text-xs font-medium px-3 py-1.5 rounded-lg border transition",
                   active.status === "pending"
                     ? "bg-amber-500 text-white border-amber-500"
                     : "border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
@@ -449,7 +481,7 @@ export default function ConversationsClient({
                   void loadConversations();
                 }}
                 className={cn(
-                  "text-xs font-medium px-3 py-1.5 rounded-lg border transition",
+                  "hidden md:inline-block text-xs font-medium px-3 py-1.5 rounded-lg border transition",
                   active.status === "resolved"
                     ? "bg-emerald-500 text-white border-emerald-500"
                     : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
@@ -597,12 +629,34 @@ export default function ConversationsClient({
         )}
       </section>
 
-      {/* PAINEL DIREITO - detalhes da conversa */}
+      {/* PAINEL DIREITO - detalhes da conversa
+          Desktop: sempre visível ao lado
+          Mobile: drawer overlay ativado pelo botão Info */}
       {active && (
-        <ConversationPanel
-          conversationId={active.id}
-          onChange={loadConversations}
-        />
+        <>
+          {/* Overlay mobile */}
+          {mobileShowPanel && (
+            <button
+              onClick={() => setMobileShowPanel(false)}
+              aria-label="Fechar"
+              className="md:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+            />
+          )}
+          <div
+            className={cn(
+              "md:relative md:block",
+              mobileShowPanel
+                ? "fixed inset-y-0 right-0 z-40 w-80 max-w-[90vw]"
+                : "hidden md:block"
+            )}
+          >
+            <ConversationPanel
+              conversationId={active.id}
+              onChange={loadConversations}
+              onClose={() => setMobileShowPanel(false)}
+            />
+          </div>
+        </>
       )}
 
     </div>

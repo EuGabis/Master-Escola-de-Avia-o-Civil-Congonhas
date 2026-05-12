@@ -56,9 +56,11 @@ interface UserOption {
 export function ConversationPanel({
   conversationId,
   onChange,
+  onClose,
 }: {
   conversationId: string;
   onChange?: () => void;
+  onClose?: () => void;
 }) {
   const [conv, setConv] = useState<ConversationDetails | null>(null);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
@@ -180,7 +182,19 @@ export function ConversationPanel({
   const activeColumnId = conv.kanbanCard?.column.id;
 
   return (
-    <aside className="w-80 shrink-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 overflow-y-auto">
+    <aside className="w-full md:w-80 h-full md:shrink-0 bg-white dark:bg-slate-900 md:border-l border-slate-200 dark:border-slate-800 overflow-y-auto">
+      {/* Close button mobile */}
+      {onClose && (
+        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="font-semibold text-slate-900 dark:text-white">Detalhes</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
       {/* CONTATO */}
       <Section title="Contato">
         <div className="flex items-start gap-3">

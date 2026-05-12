@@ -15,6 +15,7 @@ import {
   Wifi,
   WifiOff,
   LogOut,
+  X,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -24,6 +25,8 @@ import { cn } from "@/lib/cn";
 interface SidebarProps {
   workspaceId: string;
   user: { name: string; email: string; role: string; avatar: string | null };
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 const NAV = [
@@ -36,7 +39,12 @@ const NAV = [
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-export function Sidebar({ workspaceId, user }: SidebarProps) {
+export function Sidebar({
+  workspaceId,
+  user,
+  mobileOpen = false,
+  onMobileClose,
+}: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [wppState, setWppState] = useState<"open" | "close" | "connecting">("open");
@@ -55,57 +63,88 @@ export function Sidebar({ workspaceId, user }: SidebarProps) {
     };
   }, [workspaceId]);
 
+  // Fecha drawer ao navegar entre paginas (mobile)
+  useEffect(() => {
+    if (onMobileClose) onMobileClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <aside
-      className={cn(
-        "h-screen flex flex-col gradient-master-navy text-slate-100 transition-[width] duration-200 ease-out shrink-0 relative",
-        collapsed ? "w-[68px]" : "w-64"
+    <>
+      {/* OVERLAY mobile */}
+      {mobileOpen && (
+        <button
+          onClick={onMobileClose}
+          aria-label="Fechar menu"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden backdrop-blur-sm"
+        />
       )}
-    >
-      {/* LOGO */}
-      <div className="px-4 pt-5 pb-4 flex items-center justify-between">
-        {!collapsed ? (
-          <Logo variant="white" size="md" />
-        ) : (
-          <div className="w-full flex justify-center">
-            <div className="w-9 h-9 rounded-xl bg-master-orange flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-master-orange/30">
-              M
-            </div>
-          </div>
+
+      <aside
+        className={cn(
+          "h-screen flex flex-col gradient-master-navy text-slate-100 transition-transform duration-200 ease-out shrink-0 relative z-50",
+          // Desktop: largura normal/collapsed
+          "md:translate-x-0",
+          collapsed ? "md:w-[68px]" : "md:w-64",
+          // Mobile: fixed drawer
+          "fixed inset-y-0 left-0 w-72 md:relative md:w-auto",
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
-      </div>
-
-      {/* COLLAPSE BUTTON (floating) */}
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="absolute -right-3 top-7 w-6 h-6 rounded-full bg-white text-master-navy hover:bg-master-orange hover:text-white shadow-lg flex items-center justify-center transition z-10"
-        title={collapsed ? "Expandir" : "Recolher"}
       >
-        <ChevronLeft size={14} className={cn("transition", collapsed && "rotate-180")} />
-      </button>
-
-      {/* STATUS WhatsApp - igual Estacione Park, fica no topo logo apos logo */}
-      <div className={cn("px-4 mb-2", collapsed && "px-2")}>
-        <div
-          className={cn(
-            "flex items-center gap-2 text-xs",
-            collapsed && "justify-center"
-          )}
-        >
-          {wppState === "open" ? (
-            <Wifi size={13} className="text-emerald-400 shrink-0" />
-          ) : wppState === "connecting" ? (
-            <Wifi size={13} className="text-amber-400 shrink-0 animate-pulse" />
+        {/* LOGO + close mobile */}
+        <div className="px-4 pt-5 pb-4 flex items-center justify-between">
+          {!collapsed ? (
+            <Logo variant="white" size="md" />
           ) : (
-            <WifiOff size={13} className="text-red-400 shrink-0" />
+            <div className="w-full flex justify-center">
+              <div className="w-9 h-9 rounded-xl bg-master-orange flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-master-orange/30">
+                M
+              </div>
+            </div>
           )}
-          {!collapsed && (
+          {/* X close apenas no mobile */}
+          {onMobileClose && (
+            <button
+              onClick={onMobileClose}
+              className="md:hidden p-1.5 rounded-lg hover:bg-white/10 transition"
+              aria-label="Fechar menu"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* COLLAPSE BUTTON (desktop only) */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="hidden md:flex absolute -right-3 top-7 w-6 h-6 rounded-full bg-white text-master-navy hover:bg-master-orange hover:text-white shadow-lg items-center justify-center transition z-10"
+          title={collapsed ? "Expandir" : "Recolher"}
+        >
+          <ChevronLeft size={14} className={cn("transition", collapsed && "rotate-180")} />
+        </button>
+
+        {/* STATUS WhatsApp */}
+        <div className={cn("px-4 mb-2", collapsed && "md:px-2")}>
+          <div
+            className={cn(
+              "flex items-center gap-2 text-xs",
+              collapsed && "md:justify-center"
+            )}
+          >
+            {wppState === "open" ? (
+              <Wifi size={13} className="text-emerald-400 shrink-0" />
+            ) : wppState === "connecting" ? (
+              <Wifi size={13} className="text-amber-400 shrink-0 animate-pulse" />
+            ) : (
+              <WifiOff size={13} className="text-red-400 shrink-0" />
+            )}
             <span
               className={cn(
                 "font-medium",
+                collapsed && "md:hidden",
                 wppState === "open"
                   ? "text-emerald-400"
                   : wppState === "connecting"
@@ -119,48 +158,48 @@ export function Sidebar({ workspaceId, user }: SidebarProps) {
                   ? "Conectando..."
                   : "Desconectado"}
             </span>
-          )}
-        </div>
-      </div>
-
-      {/* NAV */}
-      <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto">
-        {NAV.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl text-sm font-medium transition-all",
-                collapsed ? "justify-center p-2.5" : "px-3 py-2.5",
-                active
-                  ? "bg-master-orange text-white shadow-lg shadow-master-orange/30"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white"
-              )}
-              title={collapsed ? item.label : undefined}
-            >
-              <Icon size={18} className="shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* USER + TOGGLE + LOGOUT */}
-      <div className="p-3 mt-2 space-y-1 border-t border-white/10">
-        <div
-          className={cn(
-            "flex items-center gap-3 px-2 py-2 rounded-xl",
-            !collapsed && "bg-white/5"
-          )}
-        >
-          <div className="w-9 h-9 rounded-full bg-master-orange flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-md">
-            {user.name.charAt(0).toUpperCase()}
           </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
+        </div>
+
+        {/* NAV */}
+        <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto">
+          {NAV.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onMobileClose}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl text-sm font-medium transition-all",
+                  collapsed ? "md:justify-center md:p-2.5 px-3 py-2.5" : "px-3 py-2.5",
+                  active
+                    ? "bg-master-orange text-white shadow-lg shadow-master-orange/30"
+                    : "text-slate-300 hover:bg-white/10 hover:text-white"
+                )}
+                title={collapsed ? item.label : undefined}
+              >
+                <Icon size={18} className="shrink-0" />
+                <span className={cn(collapsed && "md:hidden")}>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* USER + TOGGLE + LOGOUT */}
+        <div className="p-3 mt-2 space-y-1 border-t border-white/10">
+          <div
+            className={cn(
+              "flex items-center gap-3 px-2 py-2 rounded-xl",
+              !collapsed && "bg-white/5",
+              collapsed && "md:bg-transparent bg-white/5"
+            )}
+          >
+            <div className="w-9 h-9 rounded-full bg-master-orange flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-md">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <div className={cn("flex-1 min-w-0", collapsed && "md:hidden")}>
               <div className="text-sm font-semibold text-white truncate">
                 {user.name}
               </div>
@@ -168,23 +207,23 @@ export function Sidebar({ workspaceId, user }: SidebarProps) {
                 {user.role}
               </div>
             </div>
-          )}
+          </div>
+          <ThemeToggle collapsed={collapsed} />
+          <form action="/api/auth/logout" method="POST">
+            <button
+              type="submit"
+              className={cn(
+                "w-full flex items-center gap-3 rounded-xl text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition",
+                collapsed ? "md:justify-center md:p-2.5 px-3 py-2.5" : "px-3 py-2.5"
+              )}
+              title="Sair"
+            >
+              <LogOut size={18} />
+              <span className={cn(collapsed && "md:hidden")}>Sair</span>
+            </button>
+          </form>
         </div>
-        <ThemeToggle collapsed={collapsed} />
-        <form action="/api/auth/logout" method="POST">
-          <button
-            type="submit"
-            className={cn(
-              "w-full flex items-center gap-3 rounded-xl text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 transition",
-              collapsed ? "justify-center p-2.5" : "px-3 py-2.5"
-            )}
-            title="Sair"
-          >
-            <LogOut size={18} />
-            {!collapsed && <span>Sair</span>}
-          </button>
-        </form>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

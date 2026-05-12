@@ -106,7 +106,7 @@ export default async function DashboardPage() {
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       {/* HEADER COMPACTO */}
       <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
           <div>
             <h1 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">
               Olá, {user?.name?.split(" ")[0]}

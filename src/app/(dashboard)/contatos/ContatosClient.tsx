@@ -159,9 +159,9 @@ export default function ContatosClient() {
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-4 md:py-5 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
               Contatos
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -169,27 +169,27 @@ export default function ContatosClient() {
               {hasFilters && " encontrado(s)"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => setImporting(true)}>
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <Button variant="ghost" onClick={() => setImporting(true)} title="Importar">
               <span className="flex items-center gap-2">
-                <Upload size={14} /> Importar
+                <Upload size={14} /> <span className="hidden md:inline">Importar</span>
               </span>
             </Button>
-            <Button variant="ghost" onClick={handleExport}>
+            <Button variant="ghost" onClick={handleExport} title="Exportar">
               <span className="flex items-center gap-2">
-                <Download size={14} /> Exportar
+                <Download size={14} /> <span className="hidden md:inline">Exportar</span>
               </span>
             </Button>
-            <Button onClick={() => setEditing({ mode: "create" })}>
+            <Button onClick={() => setEditing({ mode: "create" })} title="Novo contato">
               <span className="flex items-center gap-2">
-                <Plus size={14} /> Novo contato
+                <Plus size={14} /> <span className="hidden sm:inline">Novo contato</span>
               </span>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 lg:px-8 py-6 space-y-4">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-4 md:py-6 space-y-4">
         {/* BUSCA + FILTROS */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex flex-wrap items-center gap-2">
           <div className="flex-1 min-w-[200px] flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
@@ -301,7 +301,7 @@ export default function ContatosClient() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-[40px_2fr_1fr_120px_100px_60px_60px] gap-3 px-4 py-2.5 text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-slate-800 font-semibold bg-slate-50 dark:bg-slate-800/50">
+              <div className="hidden md:grid grid-cols-[40px_2fr_1fr_120px_100px_60px_60px] gap-3 px-4 py-2.5 text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-slate-800 font-semibold bg-slate-50 dark:bg-slate-800/50">
                 <div>
                   <input
                     type="checkbox"
@@ -439,11 +439,11 @@ function ContactRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[40px_2fr_1fr_120px_100px_60px_60px] gap-3 px-4 py-2.5 items-center hover:bg-slate-50 dark:hover:bg-slate-800/30 transition group",
+        "flex md:grid md:grid-cols-[40px_2fr_1fr_120px_100px_60px_60px] gap-3 px-4 py-3 md:py-2.5 items-start md:items-center hover:bg-slate-50 dark:hover:bg-slate-800/30 transition group",
         selected && "bg-master-orange/5"
       )}
     >
-      <div>
+      <div className="pt-1 md:pt-0">
         <input
           type="checkbox"
           checked={selected}
@@ -453,26 +453,49 @@ function ContactRow({
       </div>
       <button
         onClick={onDetail}
-        className="flex items-center gap-3 min-w-0 text-left"
+        className="flex-1 md:flex-initial flex items-start md:items-center gap-3 min-w-0 text-left"
       >
-        <div className="w-8 h-8 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-xs font-bold shrink-0">
+        <div className="w-9 h-9 md:w-8 md:h-8 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-sm md:text-xs font-bold shrink-0">
           {contact.name.charAt(0).toUpperCase()}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="font-medium text-slate-900 dark:text-white truncate text-sm group-hover:text-master-orange transition">
             {contact.name}
+          </div>
+          {/* Mobile: empilha email + phone + badges no card */}
+          <div className="md:hidden text-xs text-slate-500 font-mono mt-0.5">
+            {contact.phone}
           </div>
           {contact.email && (
             <div className="text-[10px] text-slate-500 truncate">
               {contact.email}
             </div>
           )}
+          <div className="md:hidden flex items-center gap-2 mt-1.5 flex-wrap">
+            {status && (
+              <span className="inline-flex items-center gap-1.5 text-xs">
+                <span className={cn("w-2 h-2 rounded-full", status.color)} />
+                <span className="text-slate-700 dark:text-slate-300">{status.label}</span>
+              </span>
+            )}
+            {contact.courseInterest && (
+              <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300 font-semibold">
+                {contact.courseInterest}
+              </span>
+            )}
+            {contact._count.conversations > 0 && (
+              <span className="text-[10px] text-slate-500">
+                {contact._count.conversations} {contact._count.conversations === 1 ? "conv." : "convs."}
+              </span>
+            )}
+          </div>
         </div>
       </button>
-      <div className="text-sm text-slate-500 font-mono truncate">
+      {/* Desktop cells */}
+      <div className="hidden md:block text-sm text-slate-500 font-mono truncate">
         {contact.phone}
       </div>
-      <div className="text-xs">
+      <div className="hidden md:block text-xs">
         {contact.courseInterest ? (
           <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
             {contact.courseInterest}
@@ -481,7 +504,7 @@ function ContactRow({
           <span className="text-slate-400">—</span>
         )}
       </div>
-      <div>
+      <div className="hidden md:block">
         {status && (
           <span className="inline-flex items-center gap-1.5 text-xs">
             <span className={cn("w-2 h-2 rounded-full", status.color)} />
@@ -491,10 +514,11 @@ function ContactRow({
           </span>
         )}
       </div>
-      <div className="text-center text-sm text-slate-500">
+      <div className="hidden md:block text-center text-sm text-slate-500">
         {contact._count.conversations}
       </div>
-      <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition">
+      {/* Action buttons - sempre visivel no mobile, hover no desktop */}
+      <div className="flex items-center justify-end gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition">
         <button
           onClick={onChat}
           title="Abrir conversa"

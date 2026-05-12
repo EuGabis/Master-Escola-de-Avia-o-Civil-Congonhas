@@ -62,6 +62,15 @@ body {
 }
 
 @layer utilities {
+  /* Esconde scrollbar mantendo scroll funcional (para tabs mobile) */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Glow laranja Master pros botoes principais */
   .glow-master {
     box-shadow: 0 0 0 0 rgba(242, 101, 34, 0.5);

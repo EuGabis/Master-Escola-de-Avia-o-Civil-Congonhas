@@ -53,8 +53,8 @@ export default function ConfiguracoesClient() {
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       {/* HEADER */}
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-5">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-4 md:py-5">
+          <h1 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
             Configurações
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -63,9 +63,9 @@ export default function ConfiguracoesClient() {
         </div>
       </header>
 
-      {/* TABS - alinhado com header e conteudo */}
-      <div className="max-w-5xl mx-auto px-6 lg:px-8 pt-5">
-        <nav className="inline-flex flex-wrap gap-1 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+      {/* TABS - scroll horizontal no mobile */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 pt-4 md:pt-5">
+        <nav className="flex md:inline-flex md:flex-wrap gap-1 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-x-auto md:overflow-visible no-scrollbar">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
@@ -74,7 +74,7 @@ export default function ConfiguracoesClient() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-all",
+                  "flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap shrink-0",
                   active
                     ? "bg-master-orange text-white shadow-md shadow-master-orange/30"
                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60"
@@ -88,7 +88,7 @@ export default function ConfiguracoesClient() {
       </div>
 
       {/* CONTENT - mesmo container que header e tabs */}
-      <div className="max-w-5xl mx-auto px-6 lg:px-8 pb-8 pt-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 pb-8 pt-4 md:pt-6">
         {tab === "workspace" && <WorkspaceTab />}
         {tab === "followup" && <FollowUpTab />}
         {tab === "webhook" && <WebhookTab />}

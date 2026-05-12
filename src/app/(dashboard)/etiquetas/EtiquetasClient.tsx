@@ -38,7 +38,7 @@ export default function EtiquetasClient() {
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">
               Etiquetas
@@ -55,7 +55,7 @@ export default function EtiquetasClient() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">
         {loading ? (
           <p className="text-sm text-slate-500">Carregando...</p>
         ) : labels.length === 0 ? (
