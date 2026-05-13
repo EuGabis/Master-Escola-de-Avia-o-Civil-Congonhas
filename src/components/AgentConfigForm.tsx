@@ -34,6 +34,7 @@ export function AgentConfigForm() {
   const [apiKey, setApiKey] = useState(""); // input - nao recebe do GET
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/agent-config");
@@ -45,19 +46,46 @@ export function AgentConfigForm() {
     void load();
   }, []);
 
-  async function save(patch: Partial<Config> & { apiKey?: string }) {
+  async function save(
+    patch: Partial<Config> & { apiKey?: string }
+  ): Promise<{ ok: boolean; error?: string }> {
     setSaving(true);
-    const res = await fetch("/api/agent-config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+    setError(null);
+    let res: Response;
+    try {
+      res = await fetch("/api/agent-config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+    } catch (e) {
+      setSaving(false);
+      const msg = e instanceof Error ? e.message : "Erro de rede";
+      console.error("[agent-config] fetch falhou:", e);
+      setError(msg);
+      return { ok: false, error: msg };
+    }
     setSaving(false);
     if (res.ok) {
       setSavedAt(Date.now());
       void load();
       setApiKey(""); // limpa input apos salvar
+      return { ok: true };
     }
+    // tenta extrair mensagem do server
+    let msg = `HTTP ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data?.error) msg = data.error;
+      if (Array.isArray(data?.details) && data.details.length)
+        msg += " — " + data.details.join("; ");
+      else if (typeof data?.details === "string") msg += " — " + data.details;
+    } catch {
+      /* response sem JSON */
+    }
+    console.error("[agent-config] save falhou:", msg, "patch:", patch);
+    setError(msg);
+    return { ok: false, error: msg };
   }
 
   if (!cfg) return <p className="text-sm text-slate-500">Carregando...</p>;
@@ -69,6 +97,15 @@ export function AgentConfigForm() {
 
   return (
     <div className="space-y-5">
+      {error && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 text-sm p-3 flex items-start gap-2">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <div className="font-medium">Nao foi possivel salvar</div>
+            <div className="text-xs mt-0.5 opacity-90 break-words">{error}</div>
+          </div>
+        </div>
+      )}
       {/* Toggle principal */}
       <div className="flex items-center justify-between p-4 bg-master-orange/5 dark:bg-master-orange/10 rounded-xl border border-master-orange/20">
         <div className="flex items-start gap-3">
@@ -175,9 +212,7 @@ export function AgentConfigForm() {
           <Label>System Prompt (instrucoes do agente)</Label>
           <PromptSaveButton
             value={cfg.systemPrompt}
-            onSave={async (v) => {
-              await save({ systemPrompt: v });
-            }}
+            onSave={(v) => save({ systemPrompt: v })}
           />
         </div>
         <Textarea
@@ -284,31 +319,42 @@ function PromptSaveButton({
   onSave,
 }: {
   value: string;
-  onSave: (v: string) => Promise<void>;
+  onSave: (v: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
-  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle"
+  );
   return (
     <button
       type="button"
       onClick={async () => {
         setState("saving");
-        await onSave(value);
-        setState("saved");
-        setTimeout(() => setState("idle"), 1500);
+        const r = await onSave(value);
+        if (r.ok) {
+          setState("saved");
+          setTimeout(() => setState("idle"), 1500);
+        } else {
+          setState("error");
+          setTimeout(() => setState("idle"), 2500);
+        }
       }}
       disabled={state === "saving"}
       className={cn(
         "text-xs font-medium px-2.5 py-1 rounded-lg transition flex items-center gap-1.5",
         state === "saved"
           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-          : "bg-master-orange hover:bg-master-orange-600 text-white"
+          : state === "error"
+            ? "bg-red-500/15 text-red-600 dark:text-red-400"
+            : "bg-master-orange hover:bg-master-orange-600 text-white"
       )}
     >
       {state === "saving"
         ? "Salvando..."
         : state === "saved"
           ? "✓ Salvo"
-          : "Salvar prompt"}
+          : state === "error"
+            ? "✗ Falhou"
+            : "Salvar prompt"}
     </button>
   );
 }

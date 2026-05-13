@@ -70,31 +70,54 @@ export async function PATCH(req: NextRequest) {
   let body: z.infer<typeof patchSchema>;
   try {
     body = patchSchema.parse(await req.json());
-  } catch {
-    return NextResponse.json({ error: "Dados invalidos" }, { status: 400 });
+  } catch (err) {
+    const zerr = err instanceof z.ZodError ? err.issues : null;
+    console.error("[agent-config] PATCH validacao falhou:", zerr ?? err);
+    return NextResponse.json(
+      {
+        error: "Dados invalidos",
+        details: zerr?.map((i) => `${i.path.join(".")}: ${i.message}`) ?? null,
+      },
+      { status: 400 }
+    );
   }
 
-  // Garantir que existe
-  await db.agentConfig.upsert({
-    where: { workspaceId: session.wid },
-    update: {},
-    create: {
-      workspaceId: session.wid,
-      systemPrompt: DEFAULT_SYSTEM_PROMPT,
-    },
-  });
+  try {
+    // Garantir que existe
+    await db.agentConfig.upsert({
+      where: { workspaceId: session.wid },
+      update: {},
+      create: {
+        workspaceId: session.wid,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      },
+    });
 
-  // Se apiKey vier vazia (""), nao atualiza (preserva); se vier com valor, salva
-  const data: Record<string, unknown> = { ...body };
-  if (body.apiKey === "" || body.apiKey === undefined) delete data.apiKey;
+    // Se apiKey vier vazia (""), nao atualiza (preserva); se vier com valor, salva
+    const data: Record<string, unknown> = { ...body };
+    if (body.apiKey === "" || body.apiKey === undefined) delete data.apiKey;
 
-  const updated = await db.agentConfig.update({
-    where: { workspaceId: session.wid },
-    data,
-  });
+    const updated = await db.agentConfig.update({
+      where: { workspaceId: session.wid },
+      data,
+    });
 
-  return NextResponse.json({
-    ok: true,
-    config: { enabled: updated.enabled, model: updated.model },
-  });
+    return NextResponse.json({
+      ok: true,
+      config: {
+        enabled: updated.enabled,
+        model: updated.model,
+        systemPrompt: updated.systemPrompt,
+      },
+    });
+  } catch (err) {
+    console.error("[agent-config] PATCH db erro:", err);
+    return NextResponse.json(
+      {
+        error: "Erro ao salvar no banco",
+        details: err instanceof Error ? err.message : String(err),
+      },
+      { status: 500 }
+    );
+  }
 }
