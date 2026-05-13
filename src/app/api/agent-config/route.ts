@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 const patchSchema = z.object({
   enabled: z.boolean().optional(),
-  systemPrompt: z.string().max(8000).optional(),
+  systemPrompt: z.string().max(32000).optional(),
   stopCommand: z.string().min(1).max(60).optional(),
   model: z.string().min(1).max(80).optional(),
   apiKey: z.string().max(200).optional(),
