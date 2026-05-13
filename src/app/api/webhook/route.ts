@@ -105,7 +105,10 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   const direction = fromMe ? "out" : "in";
 
   // Extrai o conteudo conforme o tipo de mensagem
-  const { content, type, mediaUrl, mediaBase64, fileName } = extractContent(msg);
+  const { content, type, mediaUrl, mediaBase64, fileName } = extractContent(
+    msg,
+    payload.data as { message?: { base64?: string }; messageBase64?: string }
+  );
 
   // Upsert do contato
   const pushName = msg.pushName?.trim() || phone;
@@ -326,7 +329,10 @@ async function handleConnectionUpdate(workspaceId: string, payload: WebhookPaylo
 // Extracao de conteudo do payload Evolution
 // ============================================================
 
-function extractContent(msg: EvolutionMessage): {
+function extractContent(
+  msg: EvolutionMessage,
+  payloadData?: { message?: { base64?: string }; messageBase64?: string }
+): {
   content: string;
   type: string;
   mediaUrl?: string;
@@ -335,6 +341,25 @@ function extractContent(msg: EvolutionMessage): {
 } {
   const m = msg.message ?? {};
 
+  // Evolution v2.x pode entregar a base64 em varios lugares dependendo da versao:
+  //   1. payload.data.message.base64           (mais comum)
+  //   2. payload.data.messageBase64            (algumas versoes)
+  //   3. payload.data.message.<type>.base64    (alguns campos especificos)
+  //   4. payload.data.message.<type>.url       (URL pra download direto)
+  function pickBase64(typed?: { base64?: string; url?: string }): {
+    mediaBase64?: string;
+    mediaUrl?: string;
+  } {
+    const root = payloadData?.message?.base64 || payloadData?.messageBase64;
+    const fromTyped = typed?.base64;
+    const url = typed?.url;
+    const b64 = fromTyped || root;
+    return {
+      mediaBase64: b64 ? toDataUrl(b64) : undefined,
+      mediaUrl: url,
+    };
+  }
+
   if (m.conversation) {
     return { content: m.conversation, type: "text" };
   }
@@ -342,32 +367,52 @@ function extractContent(msg: EvolutionMessage): {
     return { content: m.extendedTextMessage.text, type: "text" };
   }
   if (m.imageMessage) {
+    const media = pickBase64({
+      base64: m.imageMessage.base64,
+      url: m.imageMessage.url,
+    });
     return {
       content: m.imageMessage.caption ?? "[imagem]",
       type: "image",
-      mediaBase64: msg.message?.base64 ?? undefined,
+      ...media,
     };
   }
   if (m.videoMessage) {
+    const media = pickBase64({
+      base64: m.videoMessage.base64,
+      url: m.videoMessage.url,
+    });
     return {
       content: m.videoMessage.caption ?? "[video]",
       type: "video",
-      mediaBase64: msg.message?.base64 ?? undefined,
+      ...media,
     };
   }
   if (m.audioMessage) {
-    return { content: "[audio]", type: "audio", mediaBase64: msg.message?.base64 ?? undefined };
+    const media = pickBase64({
+      base64: m.audioMessage.base64,
+      url: m.audioMessage.url,
+    });
+    return { content: "[audio]", type: "audio", ...media };
   }
   if (m.documentMessage) {
+    const media = pickBase64({
+      base64: m.documentMessage.base64,
+      url: m.documentMessage.url,
+    });
     return {
       content: m.documentMessage.fileName ?? "[documento]",
       type: "document",
       fileName: m.documentMessage.fileName,
-      mediaBase64: msg.message?.base64 ?? undefined,
+      ...media,
     };
   }
   if (m.stickerMessage) {
-    return { content: "[sticker]", type: "sticker" };
+    const media = pickBase64({
+      base64: m.stickerMessage.base64,
+      url: m.stickerMessage.url,
+    });
+    return { content: "[sticker]", type: "sticker", ...media };
   }
   if (m.locationMessage) {
     return { content: "[localizacao]", type: "location" };
@@ -378,9 +423,36 @@ function extractContent(msg: EvolutionMessage): {
   return { content: "[mensagem nao suportada]", type: "unknown" };
 }
 
+/**
+ * Garante que valor base64 vira data URL completa.
+ * Evolution as vezes manda 'iVBORw0KG...' puro, as vezes 'data:image/jpeg;base64,iVBO...'
+ */
+function toDataUrl(value: string): string {
+  if (value.startsWith("data:")) return value;
+  // Detecta mimetype pelos magic bytes do base64
+  const start = value.slice(0, 20);
+  let mime = "application/octet-stream";
+  if (start.startsWith("/9j/")) mime = "image/jpeg";
+  else if (start.startsWith("iVBOR")) mime = "image/png";
+  else if (start.startsWith("R0lGOD")) mime = "image/gif";
+  else if (start.startsWith("UklGR")) mime = "image/webp";
+  else if (start.startsWith("AAAA") || start.startsWith("GkXf")) mime = "video/mp4";
+  else if (start.startsWith("//uQ") || start.startsWith("T2dn")) mime = "audio/mpeg";
+  else if (start.startsWith("JVBER")) mime = "application/pdf";
+  return `data:${mime};base64,${value}`;
+}
+
 // ============================================================
 // Tipos do payload da Evolution
 // ============================================================
+
+interface MediaPayload {
+  caption?: string;
+  fileName?: string;
+  base64?: string;
+  url?: string;
+  mimetype?: string;
+}
 
 interface EvolutionMessage {
   key: { id: string; remoteJid: string; fromMe?: boolean };
@@ -389,11 +461,11 @@ interface EvolutionMessage {
   message?: {
     conversation?: string;
     extendedTextMessage?: { text: string };
-    imageMessage?: { caption?: string };
-    videoMessage?: { caption?: string };
-    audioMessage?: object;
-    documentMessage?: { fileName?: string };
-    stickerMessage?: object;
+    imageMessage?: MediaPayload;
+    videoMessage?: MediaPayload;
+    audioMessage?: MediaPayload;
+    documentMessage?: MediaPayload;
+    stickerMessage?: MediaPayload;
     locationMessage?: object;
     contactMessage?: object;
     base64?: string;

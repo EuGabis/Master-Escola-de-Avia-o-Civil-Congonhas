@@ -5,7 +5,24 @@ import { useSearchParams } from "next/navigation";
 import { getPusherClient, disconnectPusher } from "@/lib/pusher-client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { RefreshCw, Plus, Search, Send, MessagesSquare, Paperclip, Zap, ChevronLeft, Info } from "lucide-react";
+import {
+  RefreshCw,
+  Plus,
+  Search,
+  Send,
+  MessagesSquare,
+  Paperclip,
+  Zap,
+  ChevronLeft,
+  Info,
+  Image as ImageIcon,
+  Mic,
+  Video,
+  FileText,
+  Smile,
+  MapPin,
+  Contact as ContactIcon,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ConversationPanel } from "./ConversationPanel";
 import { MessageMedia } from "@/components/MessageMedia";
@@ -378,12 +395,12 @@ export default function ConversationsClient({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-sm text-slate-500 truncate">
-                      {c.lastMessage ?? "—"}
+                  <div className="flex items-center justify-between mt-0.5 gap-2">
+                    <span className="text-sm text-slate-500 truncate flex items-center gap-1.5 min-w-0">
+                      <LastMessagePreview text={c.lastMessage} />
                     </span>
                     {c.unreadCount > 0 && (
-                      <span className="bg-master-orange text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 ml-2 min-w-[20px] text-center">
+                      <span className="bg-master-orange text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 shrink-0 min-w-[20px] text-center">
                         {c.unreadCount}
                       </span>
                     )}
@@ -661,6 +678,38 @@ export default function ConversationsClient({
 
     </div>
   );
+}
+
+function LastMessagePreview({ text }: { text: string | null }) {
+  if (!text) return <span>—</span>;
+
+  // Detecta tipo de midia pelo texto que salvamos (extractContent gera essas marcas)
+  const tagMatch = text.match(/^\[(\w+)\]/);
+  if (tagMatch) {
+    const tag = tagMatch[1]!.toLowerCase();
+    const rest = text.slice(tagMatch[0].length).trim();
+    const config: Record<string, { icon: React.ReactNode; label: string }> = {
+      imagem: { icon: <ImageIcon size={12} />, label: "Foto" },
+      image: { icon: <ImageIcon size={12} />, label: "Foto" },
+      video: { icon: <Video size={12} />, label: "Vídeo" },
+      audio: { icon: <Mic size={12} />, label: "Áudio" },
+      documento: { icon: <FileText size={12} />, label: "Documento" },
+      document: { icon: <FileText size={12} />, label: "Documento" },
+      sticker: { icon: <Smile size={12} />, label: "Sticker" },
+      localizacao: { icon: <MapPin size={12} />, label: "Localização" },
+      contato: { icon: <ContactIcon size={12} />, label: "Contato" },
+    };
+    const c = config[tag];
+    if (c) {
+      return (
+        <>
+          <span className="shrink-0 text-master-orange">{c.icon}</span>
+          <span className="truncate">{rest || c.label}</span>
+        </>
+      );
+    }
+  }
+  return <span className="truncate">{text}</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
