@@ -161,6 +161,10 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     update: {}, // se ja existe, nao mexe (idempotencia)
   });
 
+  // Se a conversa estava resolvida e o contato mandou mensagem, reabre
+  const reopened =
+    direction === "in" && conversation.status === "resolved";
+
   // Atualiza preview da conversa
   await db.conversation.update({
     where: { id: conversation.id },
@@ -168,8 +172,16 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
       lastMessage: content.slice(0, 200),
       lastMessageAt: timestamp,
       unreadCount: fromMe ? conversation.unreadCount : conversation.unreadCount + 1,
+      ...(reopened ? { status: "open" } : {}),
     },
   });
+
+  if (reopened) {
+    await pusher.trigger(channels.workspace(workspaceId), ev.conversationUpdate, {
+      conversationId: conversation.id,
+      status: "open",
+    });
+  }
 
   // Publica no Pusher para a UI receber em tempo real
   await pusher.trigger(channels.workspace(workspaceId), ev.messageNew, {
