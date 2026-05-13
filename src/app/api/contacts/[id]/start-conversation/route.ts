@@ -31,12 +31,18 @@ export async function POST(
     select: { id: true, status: true },
   });
   if (!conv) {
+    // Se o Agente IA estiver ligado no workspace, a conversa ja nasce com IA ativada
+    const agentCfg = await db.agentConfig.findUnique({
+      where: { workspaceId: session.wid },
+      select: { enabled: true },
+    });
     conv = await db.conversation.create({
       data: {
         workspaceId: session.wid,
         contactId: contact.id,
         status: "open",
         channel: "whatsapp",
+        aiEnabled: !!agentCfg?.enabled,
       },
       select: { id: true, status: true },
     });

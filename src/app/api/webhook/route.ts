@@ -123,12 +123,18 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     where: { workspaceId, contactId: contact.id },
   });
   if (!conversation) {
+    // Se o Agente IA estiver ligado no workspace, ja nasce com IA ativada
+    const agentCfg = await db.agentConfig.findUnique({
+      where: { workspaceId },
+      select: { enabled: true },
+    });
     conversation = await db.conversation.create({
       data: {
         workspaceId,
         contactId: contact.id,
         status: "open",
         channel: "whatsapp",
+        aiEnabled: !!agentCfg?.enabled,
       },
     });
   }
