@@ -165,21 +165,34 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   const reopened =
     direction === "in" && conversation.status === "resolved";
 
+  // Ao reabrir, religa a IA se o Agente IA estiver ativo nas configuracoes
+  let reopenAiEnabled: boolean | null = null;
+  if (reopened) {
+    const agentCfg = await db.agentConfig.findUnique({
+      where: { workspaceId },
+      select: { enabled: true },
+    });
+    reopenAiEnabled = !!agentCfg?.enabled;
+  }
+
   // Atualiza preview da conversa
-  await db.conversation.update({
+  const updatedConversation = await db.conversation.update({
     where: { id: conversation.id },
     data: {
       lastMessage: content.slice(0, 200),
       lastMessageAt: timestamp,
       unreadCount: fromMe ? conversation.unreadCount : conversation.unreadCount + 1,
-      ...(reopened ? { status: "open" } : {}),
+      ...(reopened ? { status: "open", aiEnabled: reopenAiEnabled ?? false } : {}),
     },
   });
+  // Reflete imediatamente no objeto em memoria para o resto do handler
+  conversation = updatedConversation;
 
   if (reopened) {
     await pusher.trigger(channels.workspace(workspaceId), ev.conversationUpdate, {
       conversationId: conversation.id,
       status: "open",
+      aiEnabled: reopenAiEnabled ?? false,
     });
   }
 
