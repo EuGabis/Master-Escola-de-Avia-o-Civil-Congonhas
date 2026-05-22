@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 240" fill="none">
+  <!-- MASTER text -->
+  <text
+    x="40" y="142"
+    font-family="Inter, 'Arial Black', sans-serif"
+    font-size="120"
+    font-weight="900"
+    fill="currentColor"
+    letter-spacing="4"
+  >MASTER</text>
+
+  <!-- Circle around airplane -->
+  <circle cx="715" cy="118" r="100" stroke="currentColor" stroke-width="6" fill="none" />
+
+  <!-- Airplane silhouette inside circle (tilted up-right) -->
+  <g transform="translate(715 118) rotate(-28) translate(-55 -22)" fill="currentColor">
+    <path d="
+      M 0 18
+      L 28 12
+      L 38 6
+      L 50 0
+      L 58 4
+      L 58 14
+      L 70 13
+      L 78 6
+      L 86 6
+      L 84 14
+      L 90 18
+      L 100 18
+      L 102 22
+      L 92 26
+      L 78 30
+      L 60 32
+      L 44 34
+      L 28 30
+      L 16 24
+      Z
+    "/>
+    <!-- vertical fin -->
+    <path d="M 56 4 L 62 -8 L 66 -8 L 64 5 Z"/>
+    <!-- horizontal tail -->
+    <path d="M 14 26 L 4 32 L 12 32 L 22 28 Z"/>
+  </g>
+
+  <!-- Swooping curve (vapor trail) - starts left under MASTER, swoops down then up around right side -->
+  <path
+    d="M 38 215 Q 350 245 600 210 Q 720 195 810 130"
+    stroke="currentColor"
+    stroke-width="6"
+    stroke-linecap="round"
+    fill="none"
+  />
+</svg>

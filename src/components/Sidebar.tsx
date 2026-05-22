@@ -17,7 +17,7 @@ import {
   LogOut,
   X,
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { Logo, LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getPusherClient } from "@/lib/pusher-client";
 import { cn } from "@/lib/cn";
@@ -100,9 +100,7 @@ export function Sidebar({
             <Logo variant="white" size="md" />
           ) : (
             <div className="w-full flex justify-center">
-              <div className="w-9 h-9 rounded-xl bg-master-orange flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-master-orange/30">
-                M
-              </div>
+              <LogoMark variant="white" size="sm" />
             </div>
           )}
           {/* X close apenas no mobile */}
