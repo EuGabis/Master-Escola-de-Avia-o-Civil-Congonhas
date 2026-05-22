@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/cn";
 import { ConversationPanel } from "./ConversationPanel";
 import { MessageMedia } from "@/components/MessageMedia";
+import { LogoMark } from "@/components/Logo";
 import { useToast } from "@/components/Toast";
 import { compressImage } from "@/lib/compress";
 
@@ -422,17 +423,29 @@ export default function ConversationsClient({
         )}
       >
         {!active ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-3">
-            <div className="w-16 h-16 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center">
-              <MessagesSquare size={28} />
-            </div>
-            <div className="text-center">
-              <p className="font-medium text-slate-700 dark:text-slate-300">
-                Selecione uma conversa
-              </p>
-              <p className="text-sm text-slate-500 mt-1">
-                Escolha uma conversa da lista para comecar
-              </p>
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-6 p-8">
+            <div className="max-w-md w-full text-center space-y-6">
+              {/* Logo Master grande */}
+              <div className="flex justify-center opacity-90">
+                <LogoMark variant="orange" size="lg" className="w-24 h-24" />
+              </div>
+
+              {/* Texto */}
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Master CRM
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Selecione uma conversa na lista ao lado para visualizar as
+                  mensagens e responder.
+                </p>
+              </div>
+
+              {/* Dica visual */}
+              <div className="inline-flex items-center gap-2 text-xs text-slate-400 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-full">
+                <MessagesSquare size={12} />
+                Aguardando mensagens em tempo real
+              </div>
             </div>
           </div>
         ) : (
