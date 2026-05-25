@@ -117,6 +117,7 @@ model Conversation {
   @@index([workspaceId, status])
   @@index([contactId])
   @@index([lastMessageAt])
+  @@index([workspaceId, lastMessageAt])
 }
 
 model Message {

@@ -16,7 +16,16 @@ export async function GET() {
     where: { workspaceId: session.wid },
     orderBy: { lastMessageAt: "desc" },
     take: 100,
-    include: {
+    // SELECT explicito: evita trazer campos que o cliente nao usa
+    // (createdAt/updatedAt/channel/aiEnabled etc.) reduzindo payload e
+    // tempo de serializacao por linha.
+    select: {
+      id: true,
+      status: true,
+      unreadCount: true,
+      lastMessage: true,
+      lastMessageAt: true,
+      aiEnabled: true,
       contact: { select: { id: true, name: true, phone: true, avatar: true } },
     },
   });
