@@ -19,76 +19,73 @@ export default async function DashboardPage() {
 
   const now = new Date();
   const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  const user = await db.user.findUnique({
-    where: { id: session.uid },
-    select: { name: true },
-  });
-
-  const [
-    conversations,
-    openConversations,
-    contacts,
-    msgsTotal,
-    msgs24h,
-    msgs7d,
-    msgsIn24h,
-    msgsOut24h,
-    lastConvs,
-  ] = await Promise.all([
-    db.conversation.count({ where: { workspaceId: session.wid } }),
-    db.conversation.count({ where: { workspaceId: session.wid, status: "open" } }),
-    db.contact.count({ where: { workspaceId: session.wid } }),
-    db.message.count({ where: { conversation: { workspaceId: session.wid } } }),
-    db.message.count({
-      where: {
-        conversation: { workspaceId: session.wid },
-        timestamp: { gte: since24h },
-      },
-    }),
-    db.message.count({
-      where: {
-        conversation: { workspaceId: session.wid },
-        timestamp: { gte: since7d },
-      },
-    }),
-    db.message.count({
-      where: {
-        conversation: { workspaceId: session.wid },
-        direction: "in",
-        timestamp: { gte: since24h },
-      },
-    }),
-    db.message.count({
-      where: {
-        conversation: { workspaceId: session.wid },
-        direction: "out",
-        timestamp: { gte: since24h },
-      },
-    }),
-    db.conversation.findMany({
-      where: { workspaceId: session.wid },
-      orderBy: { lastMessageAt: "desc" },
-      take: 8,
-      include: { contact: { select: { name: true, phone: true } } },
-    }),
-  ]);
-
-  // 7 dias agregados em 1 query (GROUP BY day)
   const start7d = new Date(now);
   start7d.setDate(now.getDate() - 6);
   start7d.setHours(0, 0, 0, 0);
 
-  const raw = await db.$queryRaw<{ day: Date; count: bigint }[]>`
-    SELECT DATE_TRUNC('day', m."timestamp") AS day, COUNT(*)::bigint AS count
-    FROM "Message" m
-    JOIN "Conversation" c ON c.id = m."conversationId"
-    WHERE c."workspaceId" = ${session.wid}
-      AND m."timestamp" >= ${start7d}
-    GROUP BY day
-    ORDER BY day
-  `;
+  // Tudo em paralelo. Os 5 counts de Message viraram 1 raw query
+  // (msgStats) e os 7 dias do chart viraram 1 raw (dayStats), em vez
+  // de 5 count() separados com JOIN em Message.
+  const [convStats, contacts, msgStats, dayStats, lastConvs] = await Promise.all([
+    db.$queryRaw<{ total: bigint; open: bigint }[]>`
+      SELECT
+        COUNT(*)::bigint AS total,
+        COUNT(*) FILTER (WHERE status = 'open')::bigint AS open
+      FROM "Conversation"
+      WHERE "workspaceId" = ${session.wid}
+    `,
+    db.contact.count({ where: { workspaceId: session.wid } }),
+    db.$queryRaw<
+      {
+        total: bigint;
+        h24: bigint;
+        h24_in: bigint;
+        h24_out: bigint;
+        d7: bigint;
+      }[]
+    >`
+      SELECT
+        COUNT(*)::bigint AS total,
+        COUNT(*) FILTER (WHERE m."timestamp" >= ${since24h})::bigint AS h24,
+        COUNT(*) FILTER (WHERE m."timestamp" >= ${since24h} AND m.direction = 'in')::bigint AS h24_in,
+        COUNT(*) FILTER (WHERE m."timestamp" >= ${since24h} AND m.direction = 'out')::bigint AS h24_out,
+        COUNT(*) FILTER (WHERE m."timestamp" >= ${start7d})::bigint AS d7
+      FROM "Message" m
+      JOIN "Conversation" c ON c.id = m."conversationId"
+      WHERE c."workspaceId" = ${session.wid}
+    `,
+    db.$queryRaw<{ day: Date; count: bigint }[]>`
+      SELECT DATE_TRUNC('day', m."timestamp") AS day, COUNT(*)::bigint AS count
+      FROM "Message" m
+      JOIN "Conversation" c ON c.id = m."conversationId"
+      WHERE c."workspaceId" = ${session.wid}
+        AND m."timestamp" >= ${start7d}
+      GROUP BY day
+      ORDER BY day
+    `,
+    db.conversation.findMany({
+      where: { workspaceId: session.wid },
+      orderBy: { lastMessageAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        lastMessage: true,
+        unreadCount: true,
+        contact: { select: { name: true, phone: true } },
+      },
+    }),
+  ]);
+
+  const conversations = Number(convStats[0]?.total ?? 0);
+  const openConversations = Number(convStats[0]?.open ?? 0);
+  const msgsTotal = Number(msgStats[0]?.total ?? 0);
+  const msgs24h = Number(msgStats[0]?.h24 ?? 0);
+  const msgsIn24h = Number(msgStats[0]?.h24_in ?? 0);
+  const msgsOut24h = Number(msgStats[0]?.h24_out ?? 0);
+  const msgs7d = Number(msgStats[0]?.d7 ?? 0);
+  const userName = session.name ?? session.email;
+
+  const raw = dayStats;
   const dayMap = new Map<string, number>();
   for (const r of raw) {
     dayMap.set(r.day.toISOString().slice(0, 10), Number(r.count));
@@ -109,7 +106,7 @@ export default async function DashboardPage() {
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
           <div>
             <h1 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">
-              Olá, {user?.name?.split(" ")[0]}
+              Olá, {userName.split(" ")[0]}
             </h1>
             <p className="text-sm text-slate-500 mt-0.5">
               {now.toLocaleDateString("pt-BR", {

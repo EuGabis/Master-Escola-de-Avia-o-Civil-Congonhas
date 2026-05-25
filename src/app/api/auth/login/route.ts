@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
     wid: user.workspaceId,
     role: user.role,
     email: user.email,
+    name: user.name,
+    avatar: user.avatar,
   });
   await Promise.all([
     resetRateLimit(`login:email:${body.email}`),

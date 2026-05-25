@@ -13,6 +13,8 @@ export interface SessionPayload extends JWTPayload {
   wid: string;        // workspace id
   role: string;       // owner | admin | agent
   email: string;
+  name?: string;      // pra evitar uma query no dashboard layout
+  avatar?: string | null;
 }
 
 export async function signSession(payload: Omit<SessionPayload, keyof JWTPayload>) {
