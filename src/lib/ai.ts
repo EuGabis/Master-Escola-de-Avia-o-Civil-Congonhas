@@ -11,6 +11,24 @@ import { db } from "@/lib/db";
  * Mesma interface, mesma config, contabiliza tokens igual.
  */
 
+/**
+ * NOTA: ja existiu um cache em memoria do AgentConfig aqui.
+ * Removido porque cache local nao invalida entre lambdas — quando o
+ * usuario desligava a IA pelo painel, outras lambdas continuavam
+ * respondendo por ate 10s. Correctness > performance neste path.
+ *
+ * Cada chamada faz query fresh (~300ms) mas garante que mudancas no
+ * toggle "Agente IA ativo" valem imediatamente.
+ */
+export function getAgentConfigFresh(workspaceId: string) {
+  return db.agentConfig.findUnique({ where: { workspaceId } });
+}
+
+// Compat: noop pra nao quebrar quem ja importava invalidateAgentConfig.
+export function invalidateAgentConfig(_workspaceId: string) {
+  // cache removido — nada a invalidar
+}
+
 interface GenerateInput {
   workspaceId: string;
   conversationId: string;
@@ -48,9 +66,7 @@ function detectProvider(apiKey: string): "anthropic" | "openai" | null {
 export async function generateAIReply(
   input: GenerateInput
 ): Promise<GenerateOutput | null> {
-  const cfg = await db.agentConfig.findUnique({
-    where: { workspaceId: input.workspaceId },
-  });
+  const cfg = await getAgentConfigFresh(input.workspaceId);
   if (!cfg || !cfg.enabled || !cfg.apiKey) return null;
 
   if (cfg.tokenAlertThreshold && cfg.tokensUsedMonth >= cfg.tokenAlertThreshold) {
@@ -147,10 +163,7 @@ export async function checkStopCommand(
   conversationId: string,
   messageContent: string
 ): Promise<boolean> {
-  const cfg = await db.agentConfig.findUnique({
-    where: { workspaceId },
-    select: { stopCommand: true },
-  });
+  const cfg = await getAgentConfigFresh(workspaceId);
   const stop = (cfg?.stopCommand || "/humano").toLowerCase().trim();
   if (messageContent.toLowerCase().trim() === stop) {
     await db.conversation.update({

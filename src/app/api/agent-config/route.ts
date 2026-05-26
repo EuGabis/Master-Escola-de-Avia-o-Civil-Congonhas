@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { DEFAULT_SYSTEM_PROMPT } from "@/lib/ai";
+import { DEFAULT_SYSTEM_PROMPT, invalidateAgentConfig } from "@/lib/ai";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +101,9 @@ export async function PATCH(req: NextRequest) {
       where: { workspaceId: session.wid },
       data,
     });
+    // Zera o cache em memoria pra mudanca refletir imediato (em vez de
+    // esperar o TTL de 10s expirar).
+    invalidateAgentConfig(session.wid);
 
     return NextResponse.json({
       ok: true,

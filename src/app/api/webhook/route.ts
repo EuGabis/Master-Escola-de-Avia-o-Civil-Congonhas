@@ -3,9 +3,14 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { pusher, channels, events as ev } from "@/lib/pusher";
 import { normalizePhone, sendText } from "@/lib/evolution";
-import { generateAIReply, checkStopCommand } from "@/lib/ai";
+import {
+  generateAIReply,
+  checkStopCommand,
+  getAgentConfigFresh,
+} from "@/lib/ai";
 import { runAutomations } from "@/lib/automation";
 import { autoAssignAgent } from "@/lib/assign";
+import { memo } from "@/lib/cache";
 
 /**
  * Webhook receiver da Evolution API.
@@ -44,20 +49,24 @@ export async function POST(req: NextRequest) {
   const event = payload.event;
   const instance = payload.instance;
 
-  // 3) Resolve workspace pela instancia
-  const workspace = await db.workspace.findFirst({
-    where: { evolutionInstance: instance },
-    select: { id: true, active: true },
-  });
-
-  // Se nenhum workspace tem essa instancia ainda, tentamos o admin default
-  // (util na fase inicial onde so existe um workspace)
-  const ws =
-    workspace ??
-    (await db.workspace.findFirst({
-      where: { slug: "master", active: true },
-      select: { id: true, active: true },
-    }));
+  // 3) Resolve workspace pela instancia (cacheado 60s — evita ~300ms
+  //    em cada mensagem recebida no whatsapp).
+  const ws = await memo(
+    `ws:instance:${instance}`,
+    60_000,
+    async () => {
+      const found = await db.workspace.findFirst({
+        where: { evolutionInstance: instance },
+        select: { id: true, active: true },
+      });
+      if (found) return found;
+      // Fallback: pega o workspace 'master' (cenario inicial com 1 ws)
+      return db.workspace.findFirst({
+        where: { slug: "master", active: true },
+        select: { id: true, active: true },
+      });
+    }
+  );
 
   if (!ws) {
     console.warn(`[webhook] workspace nao encontrado para instancia ${instance}`);
@@ -124,10 +133,7 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   });
   if (!conversation) {
     // Se o Agente IA estiver ligado no workspace, ja nasce com IA ativada
-    const agentCfg = await db.agentConfig.findUnique({
-      where: { workspaceId },
-      select: { enabled: true },
-    });
+    const agentCfg = await getAgentConfigFresh(workspaceId);
     conversation = await db.conversation.create({
       data: {
         workspaceId,
@@ -168,10 +174,7 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   // Ao reabrir, religa a IA se o Agente IA estiver ativo nas configuracoes
   let reopenAiEnabled: boolean | null = null;
   if (reopened) {
-    const agentCfg = await db.agentConfig.findUnique({
-      where: { workspaceId },
-      select: { enabled: true },
-    });
+    const agentCfg = await getAgentConfigFresh(workspaceId);
     reopenAiEnabled = !!agentCfg?.enabled;
   }
 
