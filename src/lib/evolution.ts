@@ -1,4 +1,5 @@
 import { env } from "./env";
+import { toWhatsAppFormat } from "./whatsapp-format";
 
 /**
  * Cliente para a Evolution API (Cloudfy).
@@ -72,7 +73,9 @@ export async function sendText(args: SendTextArgs) {
     method: "POST",
     body: JSON.stringify({
       number: args.number,
-      text: args.text,
+      // Rede de seguranca: normaliza Markdown -> WhatsApp em TODO envio de
+      // texto (IA, followups, mensagens manuais). Idempotente.
+      text: toWhatsAppFormat(args.text),
       ...(args.quotedMessageId && {
         quoted: { key: { id: args.quotedMessageId } },
       }),
@@ -96,7 +99,7 @@ export async function sendMedia(args: SendMediaArgs) {
       number: args.number,
       mediatype: args.mediaType,
       media: args.mediaUrl,
-      caption: args.caption,
+      caption: args.caption ? toWhatsAppFormat(args.caption) : args.caption,
       fileName: args.fileName,
     }),
   });

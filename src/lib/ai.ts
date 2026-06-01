@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { db } from "@/lib/db";
+import { toWhatsAppFormat } from "@/lib/whatsapp-format";
 
 /**
  * Camada de IA - suporta Anthropic Claude OU OpenAI GPT.
@@ -140,6 +141,10 @@ export async function generateAIReply(
     }
 
     if (!result || !result.text) return null;
+
+    // Markdown do modelo (**x**, ## titulo...) -> sintaxe do WhatsApp (*x*)
+    // pra negrito renderizar de verdade sem mostrar os asteriscos.
+    result.text = toWhatsAppFormat(result.text);
 
     const total = result.tokensIn + result.tokensOut;
     await db.agentConfig.update({

@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/cn";
 import { ConversationPanel } from "./ConversationPanel";
 import { MessageMedia } from "@/components/MessageMedia";
+import { WhatsAppText } from "@/components/WhatsAppText";
 import { LogoMark } from "@/components/Logo";
 import { useToast } from "@/components/Toast";
 import { compressImage } from "@/lib/compress";
@@ -549,7 +550,7 @@ export default function ConversationsClient({
                       />
                     ) : (
                       <div className="text-sm whitespace-pre-wrap break-words">
-                        {m.content}
+                        <WhatsAppText text={m.content} />
                       </div>
                     )}
                     <div
