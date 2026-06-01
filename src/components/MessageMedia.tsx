@@ -82,8 +82,16 @@ export function MessageMedia({
   }
 
   if (type === "audio") {
+    const hasTranscript = content && content !== "[audio]";
     return (
-      <audio src={src} controls className="max-w-xs" preload="metadata" />
+      <div className="max-w-xs">
+        <audio src={src} controls className="w-full" preload="metadata" />
+        {hasTranscript && (
+          <p className="text-sm mt-1 whitespace-pre-wrap opacity-90">
+            🎤 {content}
+          </p>
+        )}
+      </div>
     );
   }
 

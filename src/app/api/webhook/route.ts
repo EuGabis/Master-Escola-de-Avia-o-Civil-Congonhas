@@ -11,6 +11,7 @@ import {
 import { runAutomations } from "@/lib/automation";
 import { autoAssignAgent } from "@/lib/assign";
 import { memo } from "@/lib/cache";
+import { transcribeAudio } from "@/lib/transcribe";
 
 /**
  * Webhook receiver da Evolution API.
@@ -114,10 +115,25 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   const direction = fromMe ? "out" : "in";
 
   // Extrai o conteudo conforme o tipo de mensagem
-  const { content, type, mediaUrl, mediaBase64, fileName } = extractContent(
+  const extracted = extractContent(
     msg,
     payload.data as { message?: { base64?: string }; messageBase64?: string }
   );
+  let content = extracted.content;
+  const { type, mediaUrl, mediaBase64, fileName } = extracted;
+
+  // Transcreve nota de voz recebida pra IA entender e o CRM mostrar o texto.
+  // Mantem type="audio" (player continua tocando) e troca o content "[audio]"
+  // pelo que foi dito. Se nao transcrever, segue como audio normal.
+  let audioTranscribed = false;
+  if (direction === "in" && type === "audio" && mediaBase64) {
+    const cfg = await getAgentConfigFresh(workspaceId);
+    const transcript = await transcribeAudio(mediaBase64, cfg?.apiKey);
+    if (transcript) {
+      content = transcript;
+      audioTranscribed = true;
+    }
+  }
 
   // Upsert do contato
   const pushName = msg.pushName?.trim() || phone;
@@ -243,10 +259,10 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   // === AGENTE IA ===
   // Responde automaticamente se:
   //  - mensagem eh do contato (in, nao fromMe)
-  //  - texto (nao audio/video etc)
+  //  - texto OU audio que foi transcrito (content ja vira o texto falado)
   //  - conversa tem aiEnabled
   //  - nao eh comando de stop
-  if (direction === "in" && type === "text") {
+  if (direction === "in" && (type === "text" || audioTranscribed)) {
     // Recarrega conversa (status pode ter mudado)
     const conv = await db.conversation.findUnique({
       where: { id: conversation.id },

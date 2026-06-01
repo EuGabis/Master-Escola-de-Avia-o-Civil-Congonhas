@@ -35,6 +35,11 @@ const envSchema = z.object({
   // Sentry
   SENTRY_DSN: z.string().optional().default(""),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional().default(""),
+
+  // Transcricao de audio (Whisper/OpenAI). Opcional: se vazio, cai no
+  // fallback de usar a apiKey OpenAI do AgentConfig (quando houver).
+  OPENAI_API_KEY: z.string().optional().default(""),
+  TRANSCRIBE_MODEL: z.string().optional().default("whisper-1"),
 });
 
 const parsed = envSchema.safeParse(process.env);
