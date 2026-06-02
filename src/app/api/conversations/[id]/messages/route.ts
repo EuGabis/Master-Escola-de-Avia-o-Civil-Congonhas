@@ -27,11 +27,14 @@ export async function GET(
   });
   if (!conv) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const messages = await db.message.findMany({
+  // Busca as 50 mensagens MAIS RECENTES (desc) e depois inverte pra ordem cronologica.
+  // Antes estava 'asc + take 30' = pegava as 30 MAIS ANTIGAS, escondendo as novas.
+  const latest = await db.message.findMany({
     where: { conversationId: id },
-    orderBy: { timestamp: "asc" },
-    take: 30, // limita pra evitar payload gigante quando ha midias base64
+    orderBy: { timestamp: "desc" },
+    take: 50,
   });
+  const messages = latest.reverse();
 
   // Marca como lidas (zera unread)
   await db.conversation.update({
