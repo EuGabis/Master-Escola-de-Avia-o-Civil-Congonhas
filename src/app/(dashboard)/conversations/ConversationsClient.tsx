@@ -141,12 +141,35 @@ export default function ConversationsClient({
   useEffect(() => {
     const pusher = getPusherClient();
     const channel = pusher.subscribe(`private-workspace-${workspaceId}`);
-    channel.bind("message:new", () => void loadConversations());
+    channel.bind(
+      "message:new",
+      (payload: { conversationId?: string }) => {
+        void loadConversations();
+        // Fallback: se a conversa que tem mensagem nova esta aberta,
+        // recarrega tambem as mensagens (caso o canal especifico esteja stale)
+        if (payload.conversationId && payload.conversationId === activeId) {
+          void loadMessages(activeId);
+        }
+      }
+    );
     return () => {
       channel.unbind_all();
       pusher.unsubscribe(`private-workspace-${workspaceId}`);
     };
-  }, [workspaceId, loadConversations]);
+  }, [workspaceId, loadConversations, activeId, loadMessages]);
+
+  // Polling de seguranca: se a aba ficar inativa por muito tempo o Pusher
+  // pode dropar a conexao. Quando a aba volta a ser visivel, recarrega tudo.
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadConversations();
+        if (activeId) void loadMessages(activeId);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [activeId, loadConversations, loadMessages]);
 
   // Pusher: conversation channel
   useEffect(() => {
