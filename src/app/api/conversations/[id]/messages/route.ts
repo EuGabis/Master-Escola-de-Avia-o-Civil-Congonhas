@@ -8,8 +8,12 @@ import { sendText } from "@/lib/evolution";
 export const dynamic = "force-dynamic";
 
 /**
- * GET  /api/conversations/[id]/messages  -> ultimas 50 mensagens
+ * GET  /api/conversations/[id]/messages  -> ultimas 50 (metadata + texto, SEM base64)
  * POST /api/conversations/[id]/messages  -> envia nova mensagem (out)
+ *
+ * IMPORTANTE: mediaBase64 NAO eh retornado aqui (pode ter MBs por mensagem).
+ * O cliente fetch-a a midia sob demanda via GET /api/messages/[id]/media.
+ * Retornamos `hasMedia: true` quando ha midia, pra UI saber que precisa buscar.
  */
 
 export async function GET(
@@ -21,26 +25,60 @@ export async function GET(
 
   const { id } = await params;
 
-  const conv = await db.conversation.findFirst({
-    where: { id, workspaceId: session.wid },
-    select: { id: true },
-  });
+  // Em paralelo: valida ownership + busca mensagens + zera unread.
+  // Tres queries independentes — Promise.all corta latencia.
+  const [conv, latest] = await Promise.all([
+    db.conversation.findFirst({
+      where: { id, workspaceId: session.wid },
+      select: { id: true },
+    }),
+    db.message.findMany({
+      where: { conversationId: id },
+      orderBy: { timestamp: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        content: true,
+        type: true,
+        direction: true,
+        status: true,
+        timestamp: true,
+        fileName: true,
+        mediaUrl: true,
+        evolutionId: true,
+        // mediaBase64 OMITIDO de proposito (pesado)
+      },
+    }),
+  ]);
+
   if (!conv) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Busca as 50 mensagens MAIS RECENTES (desc) e depois inverte pra ordem cronologica.
-  // Antes estava 'asc + take 30' = pegava as 30 MAIS ANTIGAS, escondendo as novas.
-  const latest = await db.message.findMany({
-    where: { conversationId: id },
-    orderBy: { timestamp: "desc" },
-    take: 50,
-  });
-  const messages = latest.reverse();
+  // Indica quais mensagens TEM midia (sem trazer o conteudo)
+  const needHasMedia = latest.some(
+    (m) => m.type !== "text" && m.type !== "unknown" && !m.mediaUrl
+  );
+  const hasMediaMap = needHasMedia
+    ? await db.message.findMany({
+        where: { id: { in: latest.map((m) => m.id) } },
+        select: { id: true, mediaBase64: true },
+      })
+    : [];
+  const mediaIds = new Set(
+    hasMediaMap.filter((m) => m.mediaBase64).map((m) => m.id)
+  );
 
-  // Marca como lidas (zera unread)
-  await db.conversation.update({
-    where: { id },
-    data: { unreadCount: 0 },
-  });
+  const messages = latest
+    .map((m) => ({
+      ...m,
+      mediaBase64: null,
+      hasMedia: m.mediaUrl ? true : mediaIds.has(m.id),
+    }))
+    .reverse();
+
+  // Zera unread em background (nao bloqueia resposta)
+  void db.conversation
+    .update({ where: { id }, data: { unreadCount: 0 } })
+    .catch(() => null);
 
   return NextResponse.json({ messages });
 }
@@ -66,7 +104,10 @@ export async function POST(
 
   const conv = await db.conversation.findFirst({
     where: { id, workspaceId: session.wid },
-    include: { contact: true },
+    select: {
+      id: true,
+      contact: { select: { phone: true } },
+    },
   });
   if (!conv) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -77,7 +118,6 @@ export async function POST(
       number: conv.contact.phone,
       text: body.text,
     });
-    // Evolution retorna { key: { id: "..." } } no sucesso
     evolutionId = (result as { key?: { id?: string } })?.key?.id;
   } catch (err) {
     console.error("[send] erro Evolution:", err);
@@ -101,22 +141,24 @@ export async function POST(
     },
   });
 
-  await db.conversation.update({
-    where: { id },
-    data: {
-      lastMessage: body.text.slice(0, 200),
-      lastMessageAt: new Date(),
-    },
-  });
-
-  await pusher.trigger(channels.conversation(id), ev.messageNew, {
-    id: message.id,
-    content: message.content,
-    type: "text",
-    direction: "out",
-    status: "sent",
-    timestamp: message.timestamp.toISOString(),
-  });
+  // Update preview e Pusher em paralelo, sem bloquear retorno
+  void Promise.all([
+    db.conversation.update({
+      where: { id },
+      data: {
+        lastMessage: body.text.slice(0, 200),
+        lastMessageAt: new Date(),
+      },
+    }),
+    pusher.trigger(channels.conversation(id), ev.messageNew, {
+      id: message.id,
+      content: message.content,
+      type: "text",
+      direction: "out",
+      status: "sent",
+      timestamp: message.timestamp.toISOString(),
+    }),
+  ]).catch((err) => console.error("[send] post-publish:", err));
 
   return NextResponse.json({ message });
 }

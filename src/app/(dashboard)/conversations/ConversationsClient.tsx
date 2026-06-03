@@ -52,6 +52,7 @@ interface Message {
   mediaBase64?: string | null;
   mediaUrl?: string | null;
   fileName?: string | null;
+  hasMedia?: boolean;
 }
 
 const TABS: { key: Status; label: string }[] = [
@@ -570,6 +571,8 @@ export default function ConversationsClient({
                         fileName={m.fileName}
                         content={m.content}
                         outgoing={m.direction === "out"}
+                        messageId={m.id}
+                        hasMedia={m.hasMedia}
                       />
                     ) : (
                       <div className="text-sm whitespace-pre-wrap break-words">
