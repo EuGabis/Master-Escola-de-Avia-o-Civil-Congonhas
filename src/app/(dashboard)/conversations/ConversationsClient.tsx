@@ -21,6 +21,7 @@ import {
   FileText,
   Smile,
   MapPin,
+  Camera,
   Contact as ContactIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -83,6 +84,11 @@ export default function ConversationsClient({
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [mobileShowPanel, setMobileShowPanel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
@@ -246,49 +252,79 @@ export default function ConversationsClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input.trim() }),
       });
-      if (res.ok) setInput("");
-      else {
-        const data = await res.json();
-        console.error("Erro envio:", data.error);
+      if (res.ok) {
+        setInput("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(
+          "Falha ao enviar",
+          (data as { error?: string }).error ?? "Tente novamente."
+        );
       }
+    } catch (err) {
+      console.error("Erro envio:", err);
+      toast.error("Erro de rede", "Verifique sua conexão.");
     } finally {
       setSending(false);
+      // Devolve foco pro input depois de enviar (UX: cliente queixou de
+      // ter que clicar de novo pra continuar digitando).
+      // setTimeout pra esperar render do React liberar o disabled.
+      setTimeout(() => textInputRef.current?.focus(), 0);
     }
   }
 
   async function handleFileUpload(file: File) {
     if (!activeId || uploading) return;
     setUploading(true);
+    setShowAttachMenu(false);
     try {
-      // Comprime imagens (reduz tamanho do upload)
+      // Comprime imagens (reduz tamanho do upload).
+      // Se falhar (HEIC/HEIF iPhone que canvas nao suporta), envia original.
       let processed = file;
-      if (file.type.startsWith("image/")) {
+      if (file.type.startsWith("image/") && file.type !== "image/heic" && file.type !== "image/heif") {
         try {
           processed = await compressImage(file);
-        } catch {
+        } catch (err) {
+          console.warn("[upload] compress falhou, usando original:", err);
           processed = file;
         }
       }
 
       if (processed.size > 15 * 1024 * 1024) {
-        toast.error("Arquivo muito grande", "Maximo 15 MB. Tente comprimir antes.");
+        toast.error(
+          "Arquivo muito grande",
+          `Máximo 15 MB. Seu arquivo tem ${(processed.size / 1024 / 1024).toFixed(1)} MB.`
+        );
         return;
       }
 
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
         reader.readAsDataURL(processed);
       });
 
-      const mediaType: "image" | "video" | "audio" | "document" = processed.type.startsWith("image/")
+      // Determina mediaType. Quando o arquivo nao tem MIME (alguns mobiles),
+      // tenta inferir pela extensao do nome do arquivo.
+      const inferTypeFromName = (name: string): "image" | "video" | "audio" | "document" => {
+        const ext = name.split(".").pop()?.toLowerCase() ?? "";
+        if (["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "avif"].includes(ext)) return "image";
+        if (["mp4", "mov", "webm", "3gp", "mkv", "avi"].includes(ext)) return "video";
+        if (["mp3", "ogg", "wav", "m4a", "aac", "opus", "amr"].includes(ext)) return "audio";
+        return "document";
+      };
+
+      const mime = processed.type || "";
+      const mediaType: "image" | "video" | "audio" | "document" = mime.startsWith("image/")
         ? "image"
-        : processed.type.startsWith("video/")
+        : mime.startsWith("video/")
           ? "video"
-          : processed.type.startsWith("audio/")
+          : mime.startsWith("audio/")
             ? "audio"
-            : "document";
+            : mime.startsWith("application/") || mime.startsWith("text/")
+              ? "document"
+              : inferTypeFromName(processed.name);
 
       const res = await fetch(`/api/conversations/${activeId}/media`, {
         method: "POST",
@@ -302,21 +338,27 @@ export default function ConversationsClient({
       });
       if (res.ok) {
         setInput("");
-        if (processed.size < file.size) {
-          toast.success(
-            "Arquivo enviado",
-            `Imagem otimizada: ${(file.size / 1024 / 1024).toFixed(1)}MB -> ${(processed.size / 1024 / 1024).toFixed(1)}MB`
-          );
-        } else {
-          toast.success("Arquivo enviado");
-        }
+        toast.success("Arquivo enviado", processed.name);
       } else {
-        const data = await res.json();
-        toast.error("Falha ao enviar", data.error ?? "Tente novamente");
+        const data = await res.json().catch(() => ({}));
+        const errMsg = (data as { error?: string }).error ?? `Erro ${res.status}`;
+        console.error("[upload] erro API:", errMsg, "mime:", mime, "mediaType:", mediaType);
+        toast.error("Falha ao enviar arquivo", errMsg);
       }
+    } catch (err) {
+      console.error("[upload] erro inesperado:", err);
+      toast.error(
+        "Erro ao processar arquivo",
+        err instanceof Error ? err.message : "Tente novamente"
+      );
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      // Limpa todos os refs de input file
+      [fileInputRef, imageInputRef, cameraInputRef, docInputRef].forEach((r) => {
+        if (r.current) r.current.value = "";
+      });
+      // Refoca o input de texto pra continuar a conversa
+      setTimeout(() => textInputRef.current?.focus(), 0);
     }
   }
 
@@ -634,6 +676,7 @@ export default function ConversationsClient({
               onSubmit={handleSend}
               className="relative p-2 md:p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-1.5 md:gap-2 min-w-0"
             >
+              {/* 4 inputs file invisiveis, cada um especializado */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -641,28 +684,120 @@ export default function ConversationsClient({
                   const f = e.target.files?.[0];
                   if (f) void handleFileUpload(f);
                 }}
-                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                accept="image/*,video/*,audio/*,application/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
                 className="hidden"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || sending}
-                className="shrink-0 p-2 md:p-2.5 rounded-full text-slate-500 hover:text-master-orange hover:bg-master-orange/10 transition disabled:opacity-50"
-                title="Anexar arquivo (imagem, video, audio, doc - max 15MB)"
-                aria-label="Anexar arquivo"
-              >
-                {uploading ? (
-                  <span className="block w-5 h-5 border-2 border-master-orange border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Paperclip size={18} />
-                )}
-              </button>
               <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleFileUpload(f);
+                }}
+                className="hidden"
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleFileUpload(f);
+                }}
+                className="hidden"
+              />
+              <input
+                ref={docInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.txt,.csv,.rtf,.zip"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleFileUpload(f);
+                }}
+                className="hidden"
+              />
+
+              {/* Botao paperclip que abre o menu */}
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAttachMenu((s) => !s)}
+                  disabled={uploading || sending}
+                  className={cn(
+                    "p-2 md:p-2.5 rounded-full transition disabled:opacity-50",
+                    showAttachMenu
+                      ? "bg-master-orange text-white"
+                      : "text-slate-500 hover:text-master-orange hover:bg-master-orange/10"
+                  )}
+                  title="Anexar arquivo"
+                  aria-label="Anexar arquivo"
+                >
+                  {uploading ? (
+                    <span className="block w-5 h-5 border-2 border-master-orange border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Paperclip size={18} />
+                  )}
+                </button>
+
+                {/* Menu de anexos (popup acima do botao) */}
+                {showAttachMenu && (
+                  <>
+                    {/* overlay pra fechar clicando fora */}
+                    <button
+                      type="button"
+                      aria-label="Fechar"
+                      onClick={() => setShowAttachMenu(false)}
+                      className="fixed inset-0 z-10"
+                    />
+                    <div className="absolute bottom-[calc(100%+8px)] left-0 z-20 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-fade-in">
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-master-orange/10 transition text-left"
+                      >
+                        <ImageIcon size={18} className="text-master-orange" />
+                        <span className="text-sm text-slate-900 dark:text-white">Foto / Imagem</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-master-orange/10 transition text-left md:hidden"
+                      >
+                        <Camera size={18} className="text-master-orange" />
+                        <span className="text-sm text-slate-900 dark:text-white">Tirar foto</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => docInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-master-orange/10 transition text-left"
+                      >
+                        <FileText size={18} className="text-master-orange" />
+                        <span className="text-sm text-slate-900 dark:text-white">Documento</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-master-orange/10 transition text-left border-t border-slate-100 dark:border-slate-700"
+                      >
+                        <Paperclip size={18} className="text-slate-500" />
+                        <span className="text-sm text-slate-900 dark:text-white">Outro arquivo</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <input
+                ref={textInputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") setShowQuickReplies(false);
+                  if (e.key === "Escape") {
+                    setShowQuickReplies(false);
+                    setShowAttachMenu(false);
+                  }
                 }}
                 placeholder={
                   uploading
@@ -670,6 +805,7 @@ export default function ConversationsClient({
                     : "Digite uma mensagem..."
                 }
                 disabled={sending || uploading}
+                autoFocus
                 className="flex-1 min-w-0 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 md:px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
               />
               <button
