@@ -33,6 +33,7 @@ import { useToast } from "@/components/Toast";
 import { SkeletonList } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { compressImage } from "@/lib/compress";
+import { avatarGradient, avatarInitial } from "@/lib/avatar";
 
 type Status = "open" | "pending" | "resolved" | "all";
 
@@ -449,18 +450,22 @@ export default function ConversationsClient({
               className="py-12"
             />
           ) : (
-            filtered.map((c) => (
+            filtered.map((c, idx) => (
               <button
                 key={c.id}
                 onClick={() => setActiveId(c.id)}
+                style={{ animationDelay: `${Math.min(idx, 12) * 25}ms` }}
                 className={cn(
-                  "w-full text-left px-4 py-3 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition flex gap-3",
+                  "w-full text-left px-4 py-3 border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all duration-200 flex gap-3 animate-fade-in",
                   activeId === c.id &&
                     "bg-master-orange-50 dark:bg-master-orange-900/10 border-l-4 border-l-master-orange"
                 )}
               >
-                <div className="w-10 h-10 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-sm font-bold shrink-0">
-                  {c.contact.name.charAt(0).toUpperCase()}
+                <div
+                  style={avatarGradient(c.contact.name).style}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white shadow-sm"
+                >
+                  {avatarInitial(c.contact.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">

@@ -21,6 +21,7 @@ import { Logo, LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getPusherClient } from "@/lib/pusher-client";
 import { cn } from "@/lib/cn";
+import { avatarGradient, avatarInitial } from "@/lib/avatar";
 
 interface SidebarProps {
   workspaceId: string;
@@ -170,7 +171,7 @@ export function Sidebar({
                 href={item.href}
                 onClick={onMobileClose}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl text-sm font-medium transition-all",
+                  "relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.98]",
                   collapsed ? "md:justify-center md:p-2.5 px-3 py-2.5" : "px-3 py-2.5",
                   active
                     ? "bg-master-orange text-white shadow-lg shadow-master-orange/30"
@@ -178,6 +179,13 @@ export function Sidebar({
                 )}
                 title={collapsed ? item.label : undefined}
               >
+                {/* Indicador lateral fino no item ativo (estilo Linear) */}
+                {active && !collapsed && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full shadow-md"
+                  />
+                )}
                 <Icon size={18} className="shrink-0" />
                 <span className={cn(collapsed && "md:hidden")}>{item.label}</span>
               </Link>
@@ -194,8 +202,11 @@ export function Sidebar({
               collapsed && "md:bg-transparent bg-white/5"
             )}
           >
-            <div className="w-9 h-9 rounded-full bg-master-orange flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-md">
-              {user.name.charAt(0).toUpperCase()}
+            <div
+              style={avatarGradient(user.name).style}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-md ring-2 ring-white/10"
+            >
+              {avatarInitial(user.name)}
             </div>
             <div className={cn("flex-1 min-w-0", collapsed && "md:hidden")}>
               <div className="text-sm font-semibold text-white truncate">

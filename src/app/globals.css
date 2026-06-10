@@ -7,11 +7,15 @@
    ============================================================ */
 
 :root {
-  --bg: #f8fafc;
+  --bg: #f6f7fb;
   --bg-elev: #ffffff;
-  --border: #e2e8f0;
+  --border: #e7eaf0;
   --text: #0f172a;
   --text-muted: #64748b;
+  /* Tokens semanticos pra futura migracao */
+  --surface: #ffffff;
+  --surface-muted: #f6f7fb;
+  --hairline: rgba(15, 23, 42, 0.08);
 }
 
 html.dark {
@@ -20,6 +24,22 @@ html.dark {
   --border: #1e293b;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
+  --surface: #0f172a;
+  --surface-muted: #020617;
+  --hairline: rgba(255, 255, 255, 0.08);
+}
+
+/* Tipografia base mais polida: leve antialiasing e tracking sutil em
+   headings garante uma percepcao mais "produto premium". */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.015em;
 }
 
 html, body {

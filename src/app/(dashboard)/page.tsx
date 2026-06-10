@@ -296,26 +296,26 @@ function Kpi({
 }) {
   return (
     <div
-      className={`rounded-xl border p-4 ${
+      className={`group rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 ${
         accent
-          ? "border-master-orange/30 bg-master-orange/5 dark:bg-master-orange/10"
-          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+          ? "border-master-orange/30 bg-master-orange/5 dark:bg-master-orange/10 hover:shadow-lg hover:shadow-master-orange/15"
+          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700"
       }`}
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500 font-semibold">
             {label}
           </div>
-          <div className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mt-1 leading-none">
+          <div className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mt-1.5 leading-none tabular-nums">
             {value.toLocaleString("pt-BR")}
           </div>
-          <div className="text-xs text-slate-500 mt-1.5 truncate">{sub}</div>
+          <div className="text-xs text-slate-500 mt-2 truncate">{sub}</div>
         </div>
         <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${
             accent
-              ? "bg-master-orange text-white"
+              ? "bg-master-orange text-white shadow-md shadow-master-orange/30"
               : "bg-slate-100 dark:bg-slate-800 text-slate-500"
           }`}
         >
