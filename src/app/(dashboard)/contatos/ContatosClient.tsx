@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Modal, Button, Input, Textarea, Label } from "@/components/Modal";
 import { useToast, useConfirm } from "@/components/Toast";
+import { SkeletonList } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { ContactDetailModal } from "./ContactDetailModal";
 import { cn } from "@/lib/cn";
 
@@ -388,23 +390,20 @@ export default function ContatosClient() {
         {/* TABELA */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {loading ? (
-            <div className="p-12 text-center text-sm text-slate-500">
-              Carregando...
-            </div>
+            <SkeletonList count={8} />
           ) : items.length === 0 ? (
-            <div className="p-16 text-center">
-              <div className="w-14 h-14 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center mx-auto mb-3">
-                <Users size={24} />
-              </div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">
-                {hasFilters ? "Nenhum contato encontrado" : "Sem contatos ainda"}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                {hasFilters
-                  ? "Tente ajustar os filtros ou limpar a busca"
-                  : "Crie um manualmente ou importe um CSV"}
-              </p>
-            </div>
+            <EmptyState
+              icon={<Users size={28} />}
+              title={
+                hasFilters ? "Nenhum contato encontrado" : "Sem contatos ainda"
+              }
+              description={
+                hasFilters
+                  ? "Ajuste os filtros ou limpe a busca para ver outros contatos."
+                  : "Crie um contato manualmente ou importe uma planilha CSV pra começar."
+              }
+              className="py-14"
+            />
           ) : (
             <>
               <div className="hidden md:grid grid-cols-[40px_2fr_1fr_120px_100px_60px_60px] gap-3 px-4 py-2.5 text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-slate-800 font-semibold bg-slate-50 dark:bg-slate-800/50">

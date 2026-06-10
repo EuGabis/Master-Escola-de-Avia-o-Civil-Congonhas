@@ -12,6 +12,8 @@ import {
   Circle,
 } from "lucide-react";
 import { Modal, Button, Input, Label } from "@/components/Modal";
+import { SkeletonList } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { cn } from "@/lib/cn";
 
 interface AgentUser {
@@ -80,12 +82,20 @@ export function AgentesTab() {
         </header>
 
         {loading ? (
-          <div className="p-10 text-center text-sm text-slate-500">Carregando...</div>
+          <SkeletonList count={5} />
         ) : users.length === 0 ? (
-          <div className="p-10 text-center">
-            <Users size={28} className="text-slate-400 mx-auto" />
-            <p className="text-sm text-slate-500 mt-3">Nenhum agente</p>
-          </div>
+          <EmptyState
+            icon={<Users size={28} />}
+            title="Nenhum agente cadastrado"
+            description="Adicione pessoas pro time atender conversas e usar o CRM."
+            action={
+              <Button onClick={() => setCreating(true)}>
+                <span className="flex items-center gap-2">
+                  <UserPlus size={14} /> Adicionar primeiro agente
+                </span>
+              </Button>
+            }
+          />
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {users.map((u) => (

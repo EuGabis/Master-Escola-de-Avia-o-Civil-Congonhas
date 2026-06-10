@@ -81,55 +81,77 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const config = {
     success: {
       icon: Check,
-      color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+      ring: "ring-emerald-500/20",
       iconBg: "bg-emerald-500 text-white",
+      bar: "bg-emerald-500",
     },
     error: {
       icon: X,
-      color: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+      ring: "ring-red-500/20",
       iconBg: "bg-red-500 text-white",
+      bar: "bg-red-500",
     },
     warning: {
       icon: AlertTriangle,
-      color: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+      ring: "ring-amber-500/20",
       iconBg: "bg-amber-500 text-white",
+      bar: "bg-amber-500",
     },
     info: {
       icon: Info,
-      color: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+      ring: "ring-blue-500/20",
       iconBg: "bg-blue-500 text-white",
+      bar: "bg-blue-500",
     },
   }[toast.type];
 
   const Icon = config.icon;
+  const duration = toast.duration ?? 4000;
 
   return (
     <div
       className={cn(
-        "pointer-events-auto flex items-start gap-3 p-3 pr-8 rounded-xl border backdrop-blur-sm shadow-lg bg-white dark:bg-slate-900 animate-fade-in",
-        config.color
+        "pointer-events-auto relative flex items-start gap-3 p-3.5 pr-9 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900 animate-slide-in ring-2 overflow-hidden",
+        config.ring
       )}
       role="alert"
     >
-      <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", config.iconBg)}>
-        <Icon size={14} strokeWidth={3} />
+      <div
+        className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
+          config.iconBg
+        )}
+      >
+        <Icon size={15} strokeWidth={3} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-slate-900 dark:text-white">
+        <div className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">
           {toast.title}
         </div>
         {toast.description && (
-          <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-snug">
             {toast.description}
           </div>
         )}
       </div>
       <button
         onClick={onClose}
-        className="absolute top-2.5 right-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"
+        className="absolute top-2.5 right-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition rounded p-0.5"
+        aria-label="Fechar"
       >
         <X size={14} />
       </button>
+      {/* Barra de progresso do auto-dismiss */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute bottom-0 left-0 h-[2px] w-full origin-left",
+          config.bar
+        )}
+        style={{
+          animation: `toast-progress ${duration}ms linear forwards`,
+        }}
+      />
     </div>
   );
 }

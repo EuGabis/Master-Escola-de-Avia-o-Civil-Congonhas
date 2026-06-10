@@ -30,6 +30,8 @@ import { MessageMedia } from "@/components/MessageMedia";
 import { WhatsAppText } from "@/components/WhatsAppText";
 import { LogoMark } from "@/components/Logo";
 import { useToast } from "@/components/Toast";
+import { SkeletonList } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { compressImage } from "@/lib/compress";
 
 type Status = "open" | "pending" | "resolved" | "all";
@@ -72,6 +74,7 @@ export default function ConversationsClient({
   const initialId = searchParams.get("id");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [tab, setTab] = useState<Status>("open");
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(initialId);
@@ -130,6 +133,7 @@ export default function ConversationsClient({
       setConversations(data.conversations);
     } finally {
       setRefreshing(false);
+      setInitialLoading(false);
     }
   }, []);
 
@@ -431,10 +435,19 @@ export default function ConversationsClient({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">
-              {search ? "Nenhum resultado." : "Nenhuma conversa nessa aba."}
-            </div>
+          {initialLoading ? (
+            <SkeletonList count={8} />
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={<MessagesSquare size={28} />}
+              title={search ? "Nenhum resultado" : "Nenhuma conversa aqui"}
+              description={
+                search
+                  ? "Tente outro termo de busca ou troque de aba."
+                  : "Quando um cliente mandar mensagem, a conversa aparece aqui."
+              }
+              className="py-12"
+            />
           ) : (
             filtered.map((c) => (
               <button

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bot, Save, AlertTriangle } from "lucide-react";
 import { Input, Textarea, Label, Button } from "@/components/Modal";
+import { Skeleton } from "@/components/Skeleton";
 import { cn } from "@/lib/cn";
 
 interface Config {
@@ -88,7 +89,29 @@ export function AgentConfigForm() {
     return { ok: false, error: msg };
   }
 
-  if (!cfg) return <p className="text-sm text-slate-500">Carregando...</p>;
+  if (!cfg) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <Skeleton className="h-16 rounded-xl" />
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-24 rounded" />
+          <Skeleton className="h-10 rounded-lg" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-16 rounded" />
+          <Skeleton className="h-10 rounded-lg" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-40 rounded" />
+          <Skeleton className="h-44 rounded-lg" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-48 rounded" />
+          <Skeleton className="h-10 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   const monthUsage = cfg.tokensUsedMonth;
   const limit = cfg.tokenAlertThreshold;

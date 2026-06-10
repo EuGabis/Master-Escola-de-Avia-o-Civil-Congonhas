@@ -102,10 +102,10 @@ export function Button({
 }) {
   const variants = {
     primary:
-      "bg-master-orange hover:bg-master-orange-600 text-white shadow-sm",
+      "bg-master-orange hover:bg-master-orange-600 text-white shadow-sm shadow-master-orange/20",
     secondary:
       "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white",
-    danger: "bg-red-600 hover:bg-red-700 text-white shadow-sm",
+    danger: "bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/20",
     ghost:
       "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300",
   };
@@ -113,7 +113,7 @@ export function Button({
     <button
       {...props}
       className={cn(
-        "rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:pointer-events-none",
+        "rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
         variants[variant],
         props.className
       )}
