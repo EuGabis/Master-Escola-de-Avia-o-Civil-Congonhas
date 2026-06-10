@@ -128,34 +128,75 @@ export async function setWebhook(targetUrl: string, events: string[]) {
 // ============================================================
 
 interface EvolutionContact {
-  id?: string;       // jid: "5511974694344@s.whatsapp.net"
+  id?: string;            // jid: "5511974694344@s.whatsapp.net"
   remoteJid?: string;
   pushName?: string;
+  name?: string;          // nome salvo no whatsapp da escola (agenda)
+  verifiedName?: string;  // whatsapp business
+  notify?: string;        // algumas versoes mandam aqui
   profilePicUrl?: string;
+}
+
+interface EvolutionChat {
+  id?: string;
+  remoteJid?: string;
+  pushName?: string;
+  name?: string;
+  notify?: string;
+}
+
+function unwrapList<T>(data: unknown, key: string): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj[key])) return obj[key] as T[];
+    if (Array.isArray(obj.records)) return obj.records as T[];
+    if (Array.isArray(obj.data)) return obj.data as T[];
+  }
+  return [];
 }
 
 /**
  * Lista contatos conhecidos pela Evolution.
- * Usado pra fazer backfill do `pushName` (= nome do perfil whatsapp do
- * contato) nos contatos do CRM.
- *
- * Endpoint: POST /chat/findContacts/{instance} com body { where: {} }
- * retorna todos. Suporta filtro mas a Evolution v2 ignora silenciosamente
- * em algumas versoes, entao pegamos tudo e filtramos do lado nosso.
+ * Endpoint: POST /chat/findContacts/{instance}
  */
 export async function findContacts(): Promise<EvolutionContact[]> {
   const { name } = getInstance();
-  const data = await callEvolution<EvolutionContact[] | { contacts?: EvolutionContact[] }>(
+  const data = await callEvolution<unknown>(
     `/chat/findContacts/${encodeURIComponent(name)}`,
-    {
-      method: "POST",
-      body: JSON.stringify({ where: {} }),
-    }
+    { method: "POST", body: JSON.stringify({ where: {} }) }
   );
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === "object" && Array.isArray(data.contacts))
-    return data.contacts;
-  return [];
+  return unwrapList<EvolutionContact>(data, "contacts");
+}
+
+/**
+ * Lista chats conhecidos pela Evolution. Em algumas versoes o `pushName`
+ * vem aqui (e nao em findContacts), entao usamos como fonte alternativa.
+ * Endpoint: POST /chat/findChats/{instance}
+ */
+export async function findChats(): Promise<EvolutionChat[]> {
+  const { name } = getInstance();
+  const data = await callEvolution<unknown>(
+    `/chat/findChats/${encodeURIComponent(name)}`,
+    { method: "POST", body: JSON.stringify({ where: {} }) }
+  );
+  return unwrapList<EvolutionChat>(data, "chats");
+}
+
+/**
+ * Extrai o melhor nome possivel de um objeto vindo da Evolution.
+ * Ordem de preferencia: pushName (perfil do contato) > verifiedName
+ * (whatsapp business) > notify > name (nome da agenda local).
+ */
+export function pickEvolutionName(
+  c: { pushName?: string; verifiedName?: string; notify?: string; name?: string }
+): string | null {
+  const candidates = [c.pushName, c.verifiedName, c.notify, c.name];
+  for (const v of candidates) {
+    const t = v?.trim();
+    if (t) return t;
+  }
+  return null;
 }
 
 // ============================================================

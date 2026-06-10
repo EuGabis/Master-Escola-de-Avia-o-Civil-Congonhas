@@ -147,6 +147,9 @@ export default function ContatosClient() {
     try {
       const res = await fetch("/api/contacts/sync-names", { method: "POST" });
       const data = await res.json();
+      // Loga a resposta completa pra diagnostico — abre DevTools (F12) ->
+      // Console pra ver de onde a Evolution puxou os nomes e o que veio.
+      console.log("[sync-names] resposta completa:", data);
       if (!res.ok) {
         toast.error(
           "Falha ao sincronizar",
@@ -155,10 +158,12 @@ export default function ContatosClient() {
         return;
       }
       const s = data.summary ?? {};
-      toast.success(
-        "Nomes sincronizados",
-        `Atualizados: ${s.atualizados ?? 0}, Já corretos: ${s.jaIguais ?? 0}, Sem WA: ${s.semCorrespondencia ?? 0}`
-      );
+      const detail =
+        `Atualizados: ${s.atualizados ?? 0} | ` +
+        `Já corretos: ${s.jaIguais ?? 0} | ` +
+        `Sem match: ${s.semCorrespondencia ?? 0} | ` +
+        `Evolution: ${s.evolutionContacts ?? 0} contacts + ${s.evolutionChats ?? 0} chats`;
+      toast.success("Sincronização concluída (veja console F12 pra detalhe)", detail);
       void load();
     } catch (err) {
       toast.error("Erro de rede", err instanceof Error ? err.message : String(err));
