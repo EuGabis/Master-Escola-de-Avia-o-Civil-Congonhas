@@ -46,6 +46,12 @@ export async function GET(
         fileName: true,
         mediaUrl: true,
         evolutionId: true,
+        senderId: true,
+        // Sender (agente humano) so vem em msgs out enviadas pelo painel.
+        // Mensagens out enviadas pela IA tem senderId=null — UI mostra
+        // avatar de "Bot" nesse caso. Mensagens in nao tem sender (e o
+        // proprio contato, e a UI usa o avatar do contato da conversa).
+        sender: { select: { id: true, name: true, avatar: true } },
         // mediaBase64 OMITIDO de proposito (pesado)
       },
     }),

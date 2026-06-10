@@ -122,6 +122,60 @@ export async function GET() {
     resolved: resolvedConversations,
   };
 
+  // === RANKING DE AGENTES ===
+  // Conta mensagens "out" agrupadas por senderId nos ultimos 30 dias.
+  // Mensagens da IA tem senderId=null e sao agregadas separadamente.
+  // Tambem conta quantas conversas distintas cada agente atendeu (via
+  // ConversationAssignment) — da uma nocao de carga distribuida.
+  const [msgsByAgentRaw, convsByAgentRaw, agents] = await Promise.all([
+    db.message.groupBy({
+      by: ["senderId"],
+      where: {
+        conversation: { workspaceId: ws },
+        direction: "out",
+        timestamp: { gte: since30d },
+      },
+      _count: { id: true },
+    }),
+    db.conversationAssignment.groupBy({
+      by: ["userId"],
+      where: { conversation: { workspaceId: ws } },
+      _count: { conversationId: true },
+    }),
+    db.user.findMany({
+      where: { workspaceId: ws },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        role: true,
+        isOnline: true,
+      },
+    }),
+  ]);
+
+  const msgsByAgentMap = new Map<string | null, number>();
+  for (const r of msgsByAgentRaw)
+    msgsByAgentMap.set(r.senderId, Number(r._count.id));
+  const convsByAgentMap = new Map<string, number>();
+  for (const r of convsByAgentRaw)
+    convsByAgentMap.set(r.userId, Number(r._count.conversationId));
+
+  const agentRanking = agents
+    .map((u) => ({
+      id: u.id,
+      name: u.name,
+      avatar: u.avatar,
+      role: u.role,
+      isOnline: u.isOnline,
+      messagesOut: msgsByAgentMap.get(u.id) ?? 0,
+      conversations: convsByAgentMap.get(u.id) ?? 0,
+    }))
+    .sort((a, b) => b.messagesOut - a.messagesOut);
+
+  // Linha extra pra IA (senderId=null em msgs out)
+  const aiMessages = msgsByAgentMap.get(null) ?? 0;
+
   return NextResponse.json({
     summary: {
       totalConversations,
@@ -137,5 +191,7 @@ export async function GET() {
     msgsByHour,
     topContacts,
     statusBreakdown,
+    agentRanking,
+    aiMessages,
   });
 }

@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUp, Send, Inbox, Users, MessageSquare } from "lucide-react";
+import { TrendingUp, Send, Inbox, Users, MessageSquare, Bot } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { UserAvatar } from "@/components/UserAvatar";
+
+interface AgentStat {
+  id: string;
+  name: string;
+  avatar: string | null;
+  role: string;
+  isOnline: boolean;
+  messagesOut: number;
+  conversations: number;
+}
 
 interface Data {
   summary: {
@@ -19,6 +30,8 @@ interface Data {
   msgsByHour: number[];
   topContacts: { conversationId: string; name: string; count: number }[];
   statusBreakdown: { open: number; pending: number; resolved: number };
+  agentRanking: AgentStat[];
+  aiMessages: number;
 }
 
 export default function AnalyticsClient() {
@@ -253,6 +266,123 @@ export default function AnalyticsClient() {
               />
             </div>
           </Card>
+        </div>
+
+        {/* RANKING DE AGENTES */}
+        <Card title="Atendimentos por agente (30 dias)">
+          {data.agentRanking.length === 0 && data.aiMessages === 0 ? (
+            <p className="text-sm text-slate-500 py-6 text-center">
+              Ainda sem mensagens enviadas no periodo
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(() => {
+                const maxCount = Math.max(
+                  1,
+                  data.aiMessages,
+                  ...data.agentRanking.map((a) => a.messagesOut)
+                );
+                return (
+                  <>
+                    {data.agentRanking.map((a, idx) => (
+                      <AgentRow
+                        key={a.id}
+                        idx={idx + 1}
+                        name={a.name}
+                        avatar={a.avatar}
+                        role={a.role}
+                        online={a.isOnline}
+                        messages={a.messagesOut}
+                        conversations={a.conversations}
+                        maxCount={maxCount}
+                      />
+                    ))}
+                    {data.aiMessages > 0 && (
+                      <AgentRow
+                        idx={data.agentRanking.length + 1}
+                        name="Valentina IA"
+                        avatar={null}
+                        role="ai"
+                        online
+                        messages={data.aiMessages}
+                        conversations={0}
+                        maxCount={maxCount}
+                        isBot
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function AgentRow({
+  idx,
+  name,
+  avatar,
+  role,
+  online,
+  messages,
+  conversations,
+  maxCount,
+  isBot,
+}: {
+  idx: number;
+  name: string;
+  avatar: string | null;
+  role: string;
+  online: boolean;
+  messages: number;
+  conversations: number;
+  maxCount: number;
+  isBot?: boolean;
+}) {
+  const pct = Math.round((messages / maxCount) * 100);
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs font-bold text-slate-400 w-5 shrink-0">
+        {idx}.
+      </span>
+      <div className="relative shrink-0">
+        {isBot ? (
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-master-orange to-master-orange-700 text-white flex items-center justify-center shadow-sm">
+            <Bot size={18} />
+          </div>
+        ) : (
+          <UserAvatar name={name} avatar={avatar} size={40} online={online} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+              {name}
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">
+              {role}
+              {!isBot && conversations > 0 && ` · ${conversations} conversas`}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-sm font-bold tabular-nums text-slate-900 dark:text-white">
+              {messages.toLocaleString("pt-BR")}
+            </div>
+            <div className="text-[10px] text-slate-500">msgs enviadas</div>
+          </div>
+        </div>
+        <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+          <div
+            className={cn(
+              "h-full transition-all",
+              isBot ? "bg-master-orange/80" : "bg-master-orange"
+            )}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
     </div>

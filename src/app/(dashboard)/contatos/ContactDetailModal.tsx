@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal, Button } from "@/components/Modal";
 import { useConfirm, useToast } from "@/components/Toast";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   Mail,
   Phone,
@@ -26,6 +27,7 @@ interface ContactFull {
   courseInterest: string | null;
   source: string | null;
   status: string;
+  avatar: string | null;
   createdAt: string;
   updatedAt: string;
   conversations: {
@@ -126,23 +128,39 @@ export function ContactDetailModal({
       }
     >
       <div className="space-y-5">
-        {/* Header info */}
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-xl font-bold shrink-0">
-            {contact.name.charAt(0).toUpperCase()}
+        {/* Header info — avatar grande + nome + status + curso */}
+        <div className="flex flex-col items-center text-center gap-3 pt-2 pb-1 sm:pb-3 sm:flex-row sm:text-left sm:items-center sm:gap-5">
+          <div className="relative">
+            {/* Halo decorativo atras do avatar */}
+            <div
+              aria-hidden="true"
+              className="absolute -inset-2 rounded-full bg-master-orange/10 blur-md"
+            />
+            <UserAvatar
+              name={contact.name}
+              avatar={contact.avatar ?? null}
+              size={96}
+              ring
+              className="relative shadow-lg"
+            />
           </div>
-          <div className="flex-1 min-w-0">
-            <span className="inline-flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-              <span className={cn("w-1.5 h-1.5 rounded-full", statusColor)} />
-              <span className="text-slate-700 dark:text-slate-200 font-medium">
-                {statusLabel}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="text-lg font-bold text-slate-900 dark:text-white truncate">
+              {contact.name}
+            </div>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                <span className={cn("w-1.5 h-1.5 rounded-full", statusColor)} />
+                <span className="text-slate-700 dark:text-slate-200 font-medium">
+                  {statusLabel}
+                </span>
               </span>
-            </span>
-            {contact.courseInterest && (
-              <span className="ml-1.5 text-xs bg-master-orange/10 text-master-orange px-2 py-0.5 rounded font-semibold">
-                {contact.courseInterest}
-              </span>
-            )}
+              {contact.courseInterest && (
+                <span className="text-xs bg-master-orange/10 text-master-orange px-2 py-0.5 rounded font-semibold">
+                  {contact.courseInterest}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

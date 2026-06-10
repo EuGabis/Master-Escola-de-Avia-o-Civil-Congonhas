@@ -32,6 +32,7 @@ import { LogoMark } from "@/components/Logo";
 import { useToast } from "@/components/Toast";
 import { SkeletonList } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
+import { UserAvatar } from "@/components/UserAvatar";
 import { compressImage } from "@/lib/compress";
 import { avatarGradient, avatarInitial } from "@/lib/avatar";
 
@@ -57,6 +58,8 @@ interface Message {
   mediaUrl?: string | null;
   fileName?: string | null;
   hasMedia?: boolean;
+  senderId?: string | null;
+  sender?: { id: string; name: string; avatar: string | null } | null;
 }
 
 const TABS: { key: Status; label: string }[] = [
@@ -607,55 +610,113 @@ export default function ConversationsClient({
             </header>
 
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 space-y-2">
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={cn(
-                    "flex",
-                    m.direction === "out" ? "justify-end" : "justify-start"
-                  )}
-                >
+              {messages.map((m, idx) => {
+                const prev = messages[idx - 1];
+                // Agrupa msgs consecutivas do mesmo "sender" — so a
+                // primeira do bloco mostra avatar e a ultima respira
+                // mais. Sender e identificado por direction + senderId
+                // (mensagens da IA tem senderId=null, todas iguais).
+                const sameSender =
+                  prev &&
+                  prev.direction === m.direction &&
+                  (prev.senderId ?? null) === (m.senderId ?? null);
+                const showAvatar = !sameSender;
+                const isOut = m.direction === "out";
+                const senderName = isOut
+                  ? m.sender?.name ?? "IA"
+                  : active?.contact.name ?? "?";
+                const senderAvatar = isOut
+                  ? m.sender?.avatar ?? null
+                  : null;
+                return (
                   <div
+                    key={m.id}
                     className={cn(
-                      "max-w-[80%] sm:max-w-[70%] md:max-w-lg rounded-2xl px-4 py-2 shadow-sm min-w-0",
-                      m.direction === "out"
-                        ? "bg-master-orange text-white"
-                        : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      "flex items-end gap-2",
+                      isOut ? "justify-end" : "justify-start",
+                      sameSender ? "mt-0.5" : "mt-2.5"
                     )}
                   >
-                    {m.type !== "text" && m.type !== "unknown" ? (
-                      <MessageMedia
-                        type={m.type}
-                        mediaBase64={m.mediaBase64}
-                        mediaUrl={m.mediaUrl}
-                        fileName={m.fileName}
-                        content={m.content}
-                        outgoing={m.direction === "out"}
-                        messageId={m.id}
-                        hasMedia={m.hasMedia}
-                      />
-                    ) : (
-                      <div className="text-sm whitespace-pre-wrap break-words">
-                        <WhatsAppText text={m.content} />
+                    {/* Avatar a esquerda em msgs in */}
+                    {!isOut && (
+                      <div className="w-7 shrink-0">
+                        {showAvatar && (
+                          <UserAvatar
+                            name={senderName}
+                            avatar={senderAvatar}
+                            size={28}
+                          />
+                        )}
                       </div>
                     )}
+
                     <div
                       className={cn(
-                        "text-[10px] mt-1",
-                        m.direction === "out"
-                          ? "text-master-orange-100"
-                          : "text-slate-400"
+                        "max-w-[80%] sm:max-w-[70%] md:max-w-lg rounded-2xl px-4 py-2 shadow-sm min-w-0",
+                        isOut
+                          ? "bg-master-orange text-white"
+                          : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white",
+                        // Liga a bolha anterior do mesmo sender achatando
+                        // a quina do "topo" pra dar continuidade visual.
+                        sameSender && (isOut
+                          ? "rounded-tr-md"
+                          : "rounded-tl-md")
                       )}
                     >
-                      {new Date(m.timestamp).toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {m.direction === "out" && ` · ${m.status}`}
+                      {/* Nome de quem enviou — so na primeira do bloco
+                          quando outgoing (deixa claro IA vs humano) */}
+                      {isOut && showAvatar && (
+                        <div className="text-[10px] uppercase tracking-wider opacity-80 mb-0.5 font-semibold">
+                          {m.sender ? m.sender.name : "Valentina IA"}
+                        </div>
+                      )}
+                      {m.type !== "text" && m.type !== "unknown" ? (
+                        <MessageMedia
+                          type={m.type}
+                          mediaBase64={m.mediaBase64}
+                          mediaUrl={m.mediaUrl}
+                          fileName={m.fileName}
+                          content={m.content}
+                          outgoing={isOut}
+                          messageId={m.id}
+                          hasMedia={m.hasMedia}
+                        />
+                      ) : (
+                        <div className="text-sm whitespace-pre-wrap break-words">
+                          <WhatsAppText text={m.content} />
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "text-[10px] mt-1",
+                          isOut
+                            ? "text-master-orange-100"
+                            : "text-slate-400"
+                        )}
+                      >
+                        {new Date(m.timestamp).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {isOut && ` · ${m.status}`}
+                      </div>
                     </div>
+
+                    {/* Avatar a direita em msgs out */}
+                    {isOut && (
+                      <div className="w-7 shrink-0">
+                        {showAvatar && (
+                          <UserAvatar
+                            name={senderName}
+                            avatar={senderAvatar}
+                            size={28}
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
 
