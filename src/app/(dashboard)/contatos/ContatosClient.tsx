@@ -140,6 +140,48 @@ export default function ContatosClient() {
     toast.info("Exportação iniciada", "O download começará em instantes");
   }
 
+  const [resettingBad, setResettingBad] = useState(false);
+  async function handleResetBadNames() {
+    if (resettingBad) return;
+    const ok = await confirm({
+      title: "Limpar nomes contaminados?",
+      description:
+        "Contatos com nome de 'Master | Escola de Aviação...' ou variantes vão voltar a mostrar o telefone. Quando esses contatos responderem uma mensagem, o nome real do WhatsApp deles aparece automaticamente.",
+      confirmText: "Limpar",
+    });
+    if (!ok) return;
+    setResettingBad(true);
+    try {
+      const res = await fetch("/api/contacts/reset-bad-names", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      console.log("[reset-bad-names]", data);
+      if (!res.ok) {
+        toast.error(
+          "Falha ao limpar",
+          data?.details ?? data?.error ?? "Erro desconhecido"
+        );
+        return;
+      }
+      const s = data.summary ?? {};
+      toast.success(
+        "Nomes contaminados limpos",
+        `Detectados: ${s.detectados ?? 0} · Resetados: ${s.resetados ?? 0}`
+      );
+      void load();
+    } catch (err) {
+      toast.error(
+        "Erro de rede",
+        err instanceof Error ? err.message : String(err)
+      );
+    } finally {
+      setResettingBad(false);
+    }
+  }
+
   const [syncingNames, setSyncingNames] = useState(false);
   async function handleSyncNames() {
     if (syncingNames) return;
@@ -203,6 +245,19 @@ export default function ContatosClient() {
             </p>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <Button
+              variant="ghost"
+              onClick={handleResetBadNames}
+              disabled={resettingBad}
+              title="Resetar contatos com nome contaminado pelo bug antigo"
+            >
+              <span className="flex items-center gap-2">
+                <X size={14} />
+                <span className="hidden lg:inline">
+                  {resettingBad ? "Limpando..." : "Limpar contaminados"}
+                </span>
+              </span>
+            </Button>
             <Button
               variant="ghost"
               onClick={handleSyncNames}
