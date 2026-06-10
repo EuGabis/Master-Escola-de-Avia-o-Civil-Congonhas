@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bot, Plus, Tag, X, ExternalLink, Pencil, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface Contact {
   id: string;
@@ -307,12 +308,11 @@ export function ConversationPanel({
       <Section title="Responsável" icon={UserIcon}>
         {conv.assignments.length > 0 && (
           <div className="mb-2 flex items-center gap-2 bg-master-orange/5 border border-master-orange/20 rounded-lg p-2">
-            <div
-              style={{ backgroundColor: conv.assignments[0]!.user.color }}
-              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-            >
-              {conv.assignments[0]!.user.name.charAt(0).toUpperCase()}
-            </div>
+            <UserAvatar
+              name={conv.assignments[0]!.user.name}
+              avatar={conv.assignments[0]!.user.avatar}
+              size={28}
+            />
             <span className="text-sm font-medium text-slate-900 dark:text-white flex-1 truncate">
               {conv.assignments[0]!.user.name}
             </span>

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Save, KeyRound, Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Save, KeyRound, Check, Camera, Trash2 } from "lucide-react";
 import { Button, Input, Label } from "@/components/Modal";
+import { UserAvatar } from "@/components/UserAvatar";
+import { compressImage } from "@/lib/compress";
 import { SectionCard } from "../ConfiguracoesClient";
 
 interface User {
@@ -11,14 +13,18 @@ interface User {
   email: string;
   role: string;
   color: string;
+  avatar: string | null;
 }
 
 export function MyAccountTab() {
   const [user, setUser] = useState<User | null>(null);
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#F26522");
   const [saving, setSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -28,11 +34,76 @@ export function MyAccountTab() {
   const [pwdSaved, setPwdSaved] = useState(false);
 
   async function load() {
-    const res = await fetch("/api/auth/me");
+    const res = await fetch("/api/me");
     const data = await res.json();
     setUser(data.user);
     setName(data.user.name);
-    setColor(data.user.color);
+  }
+
+  /**
+   * Le o arquivo, comprime para 256x256 jpeg quality 0.7 e converte para
+   * data URL. Salva no servidor via PATCH /api/me. O servidor re-emite o
+   * cookie de sessao com o novo avatar, entao a Sidebar reflete logo na
+   * proxima navegacao (e o reload aqui ja mostra a foto nova).
+   */
+  async function handleAvatarFile(file: File) {
+    setAvatarError(null);
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("Selecione uma imagem (jpeg, png, webp).");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      // Quadrado pequeno + quality baixa pra caber confortavel no JWT
+      // e no DB sem inflar.
+      const compressed = await compressImage(file, { maxWidth: 256, quality: 0.7 });
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+        reader.readAsDataURL(compressed);
+      });
+      const res = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAvatarError(
+          (Array.isArray(data?.details) && data.details.join("; ")) ||
+            data?.error ||
+            "Erro ao salvar foto"
+        );
+        return;
+      }
+      await load();
+      // Reload completo do dashboard pra Sidebar pegar o novo JWT
+      setTimeout(() => window.location.reload(), 300);
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : "Erro inesperado");
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function removeAvatar() {
+    setUploadingAvatar(true);
+    setAvatarError(null);
+    try {
+      const res = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar: null }),
+      });
+      if (res.ok) {
+        await load();
+        setTimeout(() => window.location.reload(), 300);
+      }
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
   useEffect(() => {
@@ -45,7 +116,7 @@ export function MyAccountTab() {
     const res = await fetch("/api/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), color }),
+      body: JSON.stringify({ name: name.trim() }),
     });
     setSaving(false);
     if (res.ok) {
@@ -54,6 +125,10 @@ export function MyAccountTab() {
       void load();
     }
   }
+
+  // Cor do avatar continua existindo no schema mas, com fotos+gradient
+  // por hash do nome, virou opcional. Mantemos o campo no banco mas a
+  // UI nao mostra mais o seletor de cor — evita confusao.
 
   async function savePassword() {
     setPwdError(null);
@@ -90,53 +165,77 @@ export function MyAccountTab() {
 
   if (!user) return <p className="text-sm text-slate-500">Carregando...</p>;
 
-  const COLORS = [
-    "#F26522", "#3b82f6", "#10b981", "#f59e0b",
-    "#ef4444", "#ec4899", "#8b5cf6", "#06b6d4",
-  ];
-
   return (
     <div className="space-y-6">
       <SectionCard title="Perfil" description="Informacoes do seu usuario">
         <div className="space-y-4">
           <div className="flex items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div
-              style={{ backgroundColor: color }}
-              className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-md"
-            >
-              {user.name.charAt(0).toUpperCase()}
+            <div className="relative">
+              <UserAvatar
+                name={user.name}
+                avatar={user.avatar}
+                size={72}
+                ring
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Trocar foto"
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-master-orange hover:bg-master-orange-600 text-white shadow-md flex items-center justify-center transition active:scale-95 disabled:opacity-60"
+              >
+                <Camera size={13} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleAvatarFile(f);
+                }}
+              />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="font-semibold text-slate-900 dark:text-white">
                 {user.email}
               </div>
               <span className="text-[10px] uppercase tracking-wider bg-master-orange/10 text-master-orange px-2 py-0.5 rounded font-medium">
                 {user.role}
               </span>
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="text-xs text-master-orange hover:underline font-medium disabled:opacity-60"
+                >
+                  {uploadingAvatar
+                    ? "Enviando..."
+                    : user.avatar
+                      ? "Trocar foto"
+                      : "Adicionar foto"}
+                </button>
+                {user.avatar && !uploadingAvatar && (
+                  <button
+                    type="button"
+                    onClick={removeAvatar}
+                    className="text-xs text-slate-500 hover:text-red-500 flex items-center gap-1 font-medium"
+                  >
+                    <Trash2 size={11} /> Remover
+                  </button>
+                )}
+              </div>
+              {avatarError && (
+                <p className="text-xs text-red-500 mt-1">{avatarError}</p>
+              )}
             </div>
           </div>
 
           <div>
             <Label>Nome</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-
-          <div>
-            <Label>Cor do avatar</Label>
-            <div className="flex flex-wrap gap-2">
-              {COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  style={{ backgroundColor: c }}
-                  className={`w-8 h-8 rounded-full transition border-2 ${
-                    color === c
-                      ? "border-slate-900 dark:border-white scale-110"
-                      : "border-transparent"
-                  }`}
-                />
-              ))}
-            </div>
           </div>
 
           <div className="flex justify-between items-center pt-2">

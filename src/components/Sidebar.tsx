@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import { Logo, LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserAvatar } from "@/components/UserAvatar";
 import { getPusherClient } from "@/lib/pusher-client";
 import { cn } from "@/lib/cn";
-import { avatarGradient, avatarInitial } from "@/lib/avatar";
 
 interface SidebarProps {
   workspaceId: string;
@@ -202,12 +202,13 @@ export function Sidebar({
               collapsed && "md:bg-transparent bg-white/5"
             )}
           >
-            <div
-              style={avatarGradient(user.name).style}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-md ring-2 ring-white/10"
-            >
-              {avatarInitial(user.name)}
-            </div>
+            <UserAvatar
+              name={user.name}
+              avatar={user.avatar}
+              size={36}
+              ring
+              className="shadow-md"
+            />
             <div className={cn("flex-1 min-w-0", collapsed && "md:hidden")}>
               <div className="text-sm font-semibold text-white truncate">
                 {user.name}

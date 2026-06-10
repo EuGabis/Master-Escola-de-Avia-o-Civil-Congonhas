@@ -14,6 +14,7 @@ import {
 import { Modal, Button, Input, Label } from "@/components/Modal";
 import { SkeletonList } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
+import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/cn";
 
 interface AgentUser {
@@ -22,6 +23,7 @@ interface AgentUser {
   email: string;
   role: string;
   color: string;
+  avatar: string | null;
   isOnline: boolean;
   lastLoginAt: string | null;
   createdAt: string;
@@ -206,17 +208,12 @@ function AgentRow({
 
   return (
     <div className="px-5 py-3 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition group">
-      <div className="relative shrink-0">
-        <div
-          style={{ backgroundColor: user.color }}
-          className="w-11 h-11 rounded-full flex items-center justify-center text-white text-base font-bold shadow-sm"
-        >
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-        {user.isOnline && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
-        )}
-      </div>
+      <UserAvatar
+        name={user.name}
+        avatar={user.avatar}
+        size={44}
+        online={user.isOnline}
+      />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
