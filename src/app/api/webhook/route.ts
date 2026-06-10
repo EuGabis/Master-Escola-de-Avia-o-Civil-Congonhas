@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { redis } from "@/lib/redis";
 import { pusher, channels, events as ev } from "@/lib/pusher";
 import { normalizePhone, sendText } from "@/lib/evolution";
 import {
@@ -114,6 +115,20 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
   const fromMe = !!msg.key.fromMe;
   const direction = fromMe ? "out" : "in";
 
+  // DEDUP: se ja existe Message com esse evolutionId, este webhook ja foi
+  // processado antes (Evolution as vezes reenfileira em retry/timeout).
+  // Sem este guard o handler reexecutava tudo, incluindo generateAIReply,
+  // gerando respostas duplicadas. Conferir cedo antes de qualquer
+  // mutacao no banco.
+  const existing = await db.message.findUnique({
+    where: { evolutionId: msg.key.id },
+    select: { id: true },
+  });
+  if (existing) {
+    console.log(`[webhook] msg duplicada (evolutionId=${msg.key.id}) — skip`);
+    return;
+  }
+
   // Extrai o conteudo conforme o tipo de mensagem
   const extracted = extractContent(
     msg,
@@ -183,16 +198,12 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     update: {}, // se ja existe, nao mexe (idempotencia)
   });
 
-  // Se a conversa estava resolvida e o contato mandou mensagem, reabre
+  // Se a conversa estava resolvida e o contato mandou mensagem, reabre.
+  // SO mexe em status — NAO religa aiEnabled. Se o atendente quiser a IA
+  // ativa na conversa que voltou, liga manualmente. Isso evita que o
+  // sistema "religue sozinho" uma IA que o atendente tinha desligado.
   const reopened =
     direction === "in" && conversation.status === "resolved";
-
-  // Ao reabrir, religa a IA se o Agente IA estiver ativo nas configuracoes
-  let reopenAiEnabled: boolean | null = null;
-  if (reopened) {
-    const agentCfg = await getAgentConfigFresh(workspaceId);
-    reopenAiEnabled = !!agentCfg?.enabled;
-  }
 
   // Atualiza preview da conversa
   const updatedConversation = await db.conversation.update({
@@ -201,7 +212,7 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
       lastMessage: content.slice(0, 200),
       lastMessageAt: timestamp,
       unreadCount: fromMe ? conversation.unreadCount : conversation.unreadCount + 1,
-      ...(reopened ? { status: "open", aiEnabled: reopenAiEnabled ?? false } : {}),
+      ...(reopened ? { status: "open" } : {}),
     },
   });
   // Reflete imediatamente no objeto em memoria para o resto do handler
@@ -211,7 +222,6 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     await pusher.trigger(channels.workspace(workspaceId), ev.conversationUpdate, {
       conversationId: conversation.id,
       status: "open",
-      aiEnabled: reopenAiEnabled ?? false,
     });
   }
 
@@ -284,17 +294,35 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
 
     if (!conv.aiEnabled) return;
 
-    // Pequeno delay para parecer mais humano (300ms)
-    await new Promise((r) => setTimeout(r, 300));
+    // LOCK: garante que so UMA lambda gera resposta IA pra essa conversa
+    // por vez. Se o cliente manda 3 mensagens em rajada, sao 3 webhooks
+    // paralelos. Sem o lock, gerariamos 3 respostas independentes. Com
+    // ele, so a primeira passa; as outras pulam silenciosamente, e a
+    // primeira (depois do delay) le o historico ja com as novas msgs
+    // incluidas — entao a unica resposta cobre o contexto inteiro.
+    //
+    // TTL de 30s e maior que o tempo da chamada Anthropic + envio,
+    // pra cobrir picos. Se a lambda crashar, o lock expira sozinho.
+    const lockKey = `ai-lock:conv:${conversation.id}`;
+    const got = await redis.set(lockKey, "1", { nx: true, ex: 30 });
+    if (got !== "OK") {
+      console.log(`[ai] lock ocupado p/ conv ${conversation.id} — skip`);
+      return;
+    }
 
-    const reply = await generateAIReply({
-      workspaceId,
-      conversationId: conversation.id,
-    });
-    if (!reply || !reply.text) return;
-
-    // Envia via Evolution
     try {
+      // Delay 1.5s para agrupar mensagens em rajada — se cliente manda
+      // "oi", "tudo bem?", "tem aula?" em sequencia, todas estarao no
+      // DB quando generateAIReply for ler o historico.
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const reply = await generateAIReply({
+        workspaceId,
+        conversationId: conversation.id,
+      });
+      if (!reply || !reply.text) return;
+
+      // Envia via Evolution
       const sendResult = await sendText({
         number: phone,
         text: reply.text,
@@ -336,6 +364,10 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
       });
     } catch (err) {
       console.error("[ai] erro ao enviar resposta IA:", err);
+    } finally {
+      // Libera o lock mesmo se deu erro — assim a proxima msg do cliente
+      // pode ser respondida sem esperar o TTL de 30s expirar.
+      await redis.del(lockKey).catch(() => null);
     }
   }
 }

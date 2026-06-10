@@ -64,13 +64,36 @@ function detectProvider(apiKey: string): "anthropic" | "openai" | null {
   return null;
 }
 
+/**
+ * Primeiro instante (00:00) do mes corrente em UTC.
+ * Usado pra decidir se o contador mensal de tokens precisa zerar.
+ */
+function startOfCurrentMonthUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
 export async function generateAIReply(
   input: GenerateInput
 ): Promise<GenerateOutput | null> {
   const cfg = await getAgentConfigFresh(input.workspaceId);
   if (!cfg || !cfg.enabled || !cfg.apiKey) return null;
 
-  if (cfg.tokenAlertThreshold && cfg.tokensUsedMonth >= cfg.tokenAlertThreshold) {
+  // Reset mensal automatico: se tokenMonthStart e de antes do dia 1 do
+  // mes atual, zera o contador antes de comparar com o threshold. Sem
+  // isso o counter crescia pra sempre e em algum momento a IA travava
+  // por "limite mensal atingido" mesmo num novo mes.
+  const monthStart = startOfCurrentMonthUTC();
+  let tokensUsedMonth = cfg.tokensUsedMonth;
+  if (!cfg.tokenMonthStart || cfg.tokenMonthStart < monthStart) {
+    await db.agentConfig.update({
+      where: { workspaceId: input.workspaceId },
+      data: { tokensUsedMonth: 0, tokenMonthStart: monthStart },
+    });
+    tokensUsedMonth = 0;
+  }
+
+  if (cfg.tokenAlertThreshold && tokensUsedMonth >= cfg.tokenAlertThreshold) {
     console.warn(`[ai] limite mensal atingido (workspace ${input.workspaceId})`);
     return null;
   }
@@ -90,11 +113,30 @@ export async function generateAIReply(
 
   if (messages.length === 0) return null;
 
-  const history = messages.map((m) => ({
+  const raw = messages.map((m) => ({
     role: m.direction === "in" ? ("user" as const) : ("assistant" as const),
     content: m.content,
   }));
-  const trimmed = history[0]?.role === "assistant" ? history.slice(1) : history;
+  // Anthropic e OpenAI exigem alternancia user/assistant. Se o cliente
+  // mandou 3 mensagens seguidas sem resposta, ou se o agente humano
+  // respondeu mais de uma vez no painel, o array fica com roles
+  // repetidos e a API rejeita com 400 silencioso. Mesclar consecutivos.
+  const merged: { role: "user" | "assistant"; content: string }[] = [];
+  for (const item of raw) {
+    const last = merged[merged.length - 1];
+    if (last && last.role === item.role) {
+      last.content = `${last.content}\n${item.content}`;
+    } else {
+      merged.push({ ...item });
+    }
+  }
+  // Anthropic exige primeira mensagem user. Se a conversa comecou com
+  // mensagem nossa (assistant) — ex: campanha de outbound — corta o
+  // prefixo ate achar o primeiro user.
+  while (merged.length > 0 && merged[0]!.role === "assistant") {
+    merged.shift();
+  }
+  const trimmed = merged;
   if (trimmed.length === 0 || trimmed[trimmed.length - 1]!.role !== "user") return null;
 
   const systemPrompt = cfg.systemPrompt || DEFAULT_SYSTEM;
