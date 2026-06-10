@@ -150,12 +150,17 @@ async function handleMessageUpsert(workspaceId: string, payload: WebhookPayload)
     }
   }
 
-  // Upsert do contato
-  const pushName = msg.pushName?.trim() || phone;
+  // Upsert do contato.
+  // Em mensagens fromMe (saida nossa), o `pushName` da Evolution e o nome
+  // do PROPRIO whatsapp da escola — nao do destinatario. Sobrescrever
+  // com isso colocava todo mundo como "Master | Escola...". So usa o
+  // pushName quando a mensagem e inbound (vinda do contato).
+  const incomingPushName =
+    !fromMe && msg.pushName?.trim() ? msg.pushName.trim() : null;
   const contact = await db.contact.upsert({
     where: { workspaceId_phone: { workspaceId, phone } },
-    create: { workspaceId, phone, name: pushName },
-    update: { name: pushName },
+    create: { workspaceId, phone, name: incomingPushName ?? phone },
+    update: incomingPushName ? { name: incomingPushName } : {},
   });
 
   // Upsert da conversa

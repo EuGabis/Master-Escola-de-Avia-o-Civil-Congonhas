@@ -124,6 +124,41 @@ export async function setWebhook(targetUrl: string, events: string[]) {
 }
 
 // ============================================================
+// Contatos (sincronizar nomes do whatsapp)
+// ============================================================
+
+interface EvolutionContact {
+  id?: string;       // jid: "5511974694344@s.whatsapp.net"
+  remoteJid?: string;
+  pushName?: string;
+  profilePicUrl?: string;
+}
+
+/**
+ * Lista contatos conhecidos pela Evolution.
+ * Usado pra fazer backfill do `pushName` (= nome do perfil whatsapp do
+ * contato) nos contatos do CRM.
+ *
+ * Endpoint: POST /chat/findContacts/{instance} com body { where: {} }
+ * retorna todos. Suporta filtro mas a Evolution v2 ignora silenciosamente
+ * em algumas versoes, entao pegamos tudo e filtramos do lado nosso.
+ */
+export async function findContacts(): Promise<EvolutionContact[]> {
+  const { name } = getInstance();
+  const data = await callEvolution<EvolutionContact[] | { contacts?: EvolutionContact[] }>(
+    `/chat/findContacts/${encodeURIComponent(name)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ where: {} }),
+    }
+  );
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object" && Array.isArray(data.contacts))
+    return data.contacts;
+  return [];
+}
+
+// ============================================================
 // Helpers de telefone (E164 sem +)
 // ============================================================
 

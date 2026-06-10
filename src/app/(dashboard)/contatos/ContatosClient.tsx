@@ -14,6 +14,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { Modal, Button, Input, Textarea, Label } from "@/components/Modal";
 import { useToast, useConfirm } from "@/components/Toast";
@@ -139,6 +140,33 @@ export default function ContatosClient() {
     toast.info("Exportação iniciada", "O download começará em instantes");
   }
 
+  const [syncingNames, setSyncingNames] = useState(false);
+  async function handleSyncNames() {
+    if (syncingNames) return;
+    setSyncingNames(true);
+    try {
+      const res = await fetch("/api/contacts/sync-names", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(
+          "Falha ao sincronizar",
+          data?.details ?? data?.error ?? "Erro desconhecido"
+        );
+        return;
+      }
+      const s = data.summary ?? {};
+      toast.success(
+        "Nomes sincronizados",
+        `Atualizados: ${s.atualizados ?? 0}, Já corretos: ${s.jaIguais ?? 0}, Sem WA: ${s.semCorrespondencia ?? 0}`
+      );
+      void load();
+    } catch (err) {
+      toast.error("Erro de rede", err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncingNames(false);
+    }
+  }
+
   async function handleStartChat(contactId: string) {
     const res = await fetch(`/api/contacts/${contactId}/start-conversation`, {
       method: "POST",
@@ -170,6 +198,22 @@ export default function ContatosClient() {
             </p>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <Button
+              variant="ghost"
+              onClick={handleSyncNames}
+              disabled={syncingNames}
+              title="Atualizar nomes dos contatos pelo WhatsApp"
+            >
+              <span className="flex items-center gap-2">
+                <RefreshCw
+                  size={14}
+                  className={syncingNames ? "animate-spin" : ""}
+                />
+                <span className="hidden md:inline">
+                  {syncingNames ? "Sincronizando..." : "Sincronizar nomes"}
+                </span>
+              </span>
+            </Button>
             <Button variant="ghost" onClick={() => setImporting(true)} title="Importar">
               <span className="flex items-center gap-2">
                 <Upload size={14} /> <span className="hidden md:inline">Importar</span>
