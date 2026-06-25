@@ -3,16 +3,12 @@ import { cn } from "@/lib/cn";
 /**
  * Logo oficial da Master Escola de Aviacao Civil Congonhas.
  *
- * Reproducao em SVG do logo oficial — texto MASTER, swoosh curvado e
- * sol laranja com aviao branco.
+ * Carrega o arquivo /logo-master.svg da pasta public — este eh o asset
+ * oficial vetorizado a partir do PNG. Tem fundo navy proprio embutido,
+ * entao funciona em qualquer cor de superficie.
  *
- * Variants controlam APENAS o texto + swoosh (currentColor):
- *   - navy   = #1B2862 (em fundos claros)
- *   - white  = white   (em fundos escuros tipo sidebar)
- *   - orange = master-orange (decorativo)
- *
- * O sol laranja e o aviao tem cores FIXAS (sol = gradient laranja Master,
- * aviao = branco) — preservam a identidade visual em qualquer fundo.
+ * A prop `variant` e mantida por compat com callsites antigos mas nao
+ * altera mais a aparencia (a logo oficial e colorida com paleta fixa).
  */
 export function Logo({
   className,
@@ -23,11 +19,7 @@ export function Logo({
   variant?: "navy" | "white" | "orange";
   size?: "sm" | "md" | "lg";
 }) {
-  const colors = {
-    navy: "text-master-navy",
-    white: "text-white",
-    orange: "text-master-orange",
-  }[variant];
+  void variant; // mantido por compat, sem efeito visual
 
   const sizes = {
     sm: "h-8",
@@ -35,74 +27,14 @@ export function Logo({
     lg: "h-20",
   }[size];
 
-  // ID unico por instancia evita conflito de gradient quando varias
-  // Logos coexistem na mesma pagina (sidebar + login splash, etc).
-  const gradId = "master-sun-grad";
-
   return (
-    <div className={cn("inline-flex items-center", colors, className)}>
-      <svg
-        viewBox="0 0 880 280"
-        className={cn(sizes, "w-auto")}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-label="Master Escola de Aviacao Civil Congonhas"
-      >
-        <defs>
-          {/* Gradiente radial do sol — claro no centro, escuro nas bordas */}
-          <radialGradient id={gradId} cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stopColor="#FFB066" />
-            <stop offset="55%" stopColor="#F26522" />
-            <stop offset="100%" stopColor="#C84810" />
-          </radialGradient>
-        </defs>
-
-        {/* TEXTO MASTER — letras heavy, ligeiramente compactas */}
-        <text
-          x="20"
-          y="160"
-          fontFamily="'Helvetica Neue', Inter, 'Arial Black', sans-serif"
-          fontSize="150"
-          fontWeight={900}
-          fill="currentColor"
-          letterSpacing="-2"
-          fontStyle="normal"
-        >
-          MASTER
-        </text>
-
-        {/* SOL — circulo laranja com gradiente */}
-        <circle cx="725" cy="130" r="115" fill={`url(#${gradId})`} />
-
-        {/* AVIAO BRANCO sobre o sol — desenho simplificado de aeronave
-            comercial em vista lateral, inclinado pra cima e direita */}
-        <g
-          transform="translate(725 130) rotate(-12) translate(-90 -28)"
-          fill="#ffffff"
-        >
-          {/* Fuselagem principal + nariz pontudo */}
-          <path d="M 0 28 L 30 22 L 60 18 L 95 14 L 130 12 L 158 14 L 168 18 L 175 24 L 178 30 L 175 36 L 168 40 L 156 42 L 130 44 L 95 44 L 60 40 L 30 36 L 0 30 Z" />
-          {/* Asa principal (lado superior) */}
-          <path d="M 75 18 L 92 -10 L 102 -12 L 118 -8 L 110 16 Z" />
-          {/* Asa de cauda (vertical) */}
-          <path d="M 145 14 L 158 -8 L 168 -8 L 165 12 Z" />
-          {/* Estabilizador horizontal traseiro */}
-          <path d="M 158 22 L 178 12 L 186 12 L 184 22 Z" />
-          <path d="M 158 34 L 178 44 L 186 44 L 184 34 Z" />
-          {/* Rastro/vento curto atras pra sensacao de movimento */}
-          <rect x="-12" y="26" width="14" height="3" rx="1.5" opacity="0.55" />
-          <rect x="-22" y="30" width="20" height="2" rx="1" opacity="0.35" />
-        </g>
-
-        {/* SWOOSH — curva curvada passando por baixo do texto ate o sol */}
-        <path
-          d="M 28 235 Q 200 270 380 248 T 600 218 Q 680 200 740 175"
-          stroke="currentColor"
-          strokeWidth={7}
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo-master.svg"
+      alt="Master Escola de Aviacao Civil Congonhas"
+      className={cn(sizes, "w-auto select-none", className)}
+      draggable={false}
+    />
   );
 }
 
