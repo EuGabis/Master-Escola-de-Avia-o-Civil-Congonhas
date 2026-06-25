@@ -17,7 +17,6 @@ import {
   LogOut,
   X,
 } from "lucide-react";
-import { Logo, LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserAvatar } from "@/components/UserAvatar";
 import { getPusherClient } from "@/lib/pusher-client";
@@ -98,10 +97,14 @@ export function Sidebar({
         {/* LOGO + close mobile */}
         <div className="px-4 pt-5 pb-4 flex items-center justify-between">
           {!collapsed ? (
-            <Logo variant="white" size="md" />
+            <span className="text-white text-2xl font-black tracking-[0.18em] leading-none select-none">
+              MASTER
+            </span>
           ) : (
             <div className="w-full flex justify-center">
-              <LogoMark variant="white" size="sm" />
+              <span className="text-white text-sm font-black tracking-[0.15em] leading-none select-none">
+                M
+              </span>
             </div>
           )}
           {/* X close apenas no mobile */}
