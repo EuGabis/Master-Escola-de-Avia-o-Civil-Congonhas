@@ -95,23 +95,21 @@ export function Sidebar({
         )}
       >
         {/* LOGO + close mobile */}
-        <div className="px-4 pt-5 pb-4 flex items-center justify-between">
+        <div className="relative px-4 pt-5 pb-4 flex items-center justify-center">
           {!collapsed ? (
-            <span className="text-white text-2xl font-black tracking-[0.18em] leading-none select-none">
+            <span className="text-white text-2xl font-black tracking-[0.22em] leading-none select-none">
               MASTER
             </span>
           ) : (
-            <div className="w-full flex justify-center">
-              <span className="text-white text-sm font-black tracking-[0.15em] leading-none select-none">
-                M
-              </span>
-            </div>
+            <span className="text-white text-base font-black tracking-[0.15em] leading-none select-none">
+              M
+            </span>
           )}
-          {/* X close apenas no mobile */}
+          {/* X close apenas no mobile — flutua a direita pra nao desbalancear o centro */}
           {onMobileClose && (
             <button
               onClick={onMobileClose}
-              className="md:hidden p-1.5 rounded-lg hover:bg-white/10 transition"
+              className="md:hidden absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-white/10 transition"
               aria-label="Fechar menu"
             >
               <X size={18} />
