@@ -25,6 +25,8 @@ import { cn } from "@/lib/cn";
 interface SidebarProps {
   workspaceId: string;
   user: { name: string; email: string; role: string; avatar: string | null };
+  workspaceLogo?: string | null;
+  workspaceName?: string | null;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
@@ -42,6 +44,8 @@ const NAV = [
 export function Sidebar({
   workspaceId,
   user,
+  workspaceLogo = null,
+  workspaceName = null,
   mobileOpen = false,
   onMobileClose,
 }: SidebarProps) {
@@ -95,14 +99,32 @@ export function Sidebar({
         )}
       >
         {/* LOGO + close mobile */}
-        <div className="relative px-4 pt-5 pb-4 flex items-center justify-center">
+        <div className="relative px-4 pt-5 pb-4 flex items-center justify-center min-h-[68px]">
           {!collapsed ? (
-            <span className="text-white text-2xl font-black tracking-[0.22em] leading-none select-none">
-              MASTER
-            </span>
+            workspaceLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={workspaceLogo}
+                alt={workspaceName ?? "Logo"}
+                className="max-h-12 w-auto max-w-[200px] object-contain select-none"
+                draggable={false}
+              />
+            ) : (
+              <span className="text-white text-2xl font-black tracking-[0.22em] leading-none select-none">
+                {(workspaceName || "MASTER").slice(0, 10).toUpperCase()}
+              </span>
+            )
+          ) : workspaceLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={workspaceLogo}
+              alt={workspaceName ?? "Logo"}
+              className="max-h-8 w-auto max-w-[48px] object-contain select-none"
+              draggable={false}
+            />
           ) : (
             <span className="text-white text-base font-black tracking-[0.15em] leading-none select-none">
-              M
+              {(workspaceName || "M").charAt(0).toUpperCase()}
             </span>
           )}
           {/* X close apenas no mobile — flutua a direita pra nao desbalancear o centro */}

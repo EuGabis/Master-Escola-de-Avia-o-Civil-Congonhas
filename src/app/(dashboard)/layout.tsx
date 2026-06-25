@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { MobileShell } from "@/components/MobileShell";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +24,21 @@ export default async function DashboardLayout({
     avatar: session.avatar ?? null,
   };
 
+  // Logo do workspace pra mostrar na sidebar. Query pequena (1 campo),
+  // mas executa em cada navegacao do dashboard — mantemos pra logo
+  // refletir imediato quando o admin troca.
+  const ws = await db.workspace.findUnique({
+    where: { id: session.wid },
+    select: { logo: true, name: true },
+  });
+
   return (
-    <MobileShell workspaceId={session.wid} user={user}>
+    <MobileShell
+      workspaceId={session.wid}
+      user={user}
+      workspaceLogo={ws?.logo ?? null}
+      workspaceName={ws?.name ?? null}
+    >
       {children}
     </MobileShell>
   );

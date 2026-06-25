@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { Logo } from "@/components/Logo";
 import { PwaAndNotifications } from "@/components/PwaAndNotifications";
 
 interface ShellProps {
   workspaceId: string;
   user: { name: string; email: string; role: string; avatar: string | null };
+  workspaceLogo?: string | null;
+  workspaceName?: string | null;
   children: React.ReactNode;
 }
 
@@ -18,20 +19,29 @@ interface ShellProps {
  * Mobile (<md): topbar com hamburger + logo, sidebar fica como drawer
  * Desktop: sidebar fixa lateral normal
  */
-export function MobileShell({ workspaceId, user, children }: ShellProps) {
+export function MobileShell({
+  workspaceId,
+  user,
+  workspaceLogo = null,
+  workspaceName = null,
+  children,
+}: ShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const brand = (workspaceName || "MASTER").slice(0, 10).toUpperCase();
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         workspaceId={workspaceId}
         user={user}
+        workspaceLogo={workspaceLogo}
+        workspaceName={workspaceName}
         mobileOpen={menuOpen}
         onMobileClose={() => setMenuOpen(false)}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 dark:bg-slate-950">
-        {/* TOPBAR MOBILE - hamburger + logo */}
+        {/* TOPBAR MOBILE - hamburger + logo/nome */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-master-navy text-white shrink-0">
           <button
             onClick={() => setMenuOpen(true)}
@@ -40,7 +50,19 @@ export function MobileShell({ workspaceId, user, children }: ShellProps) {
           >
             <Menu size={20} />
           </button>
-          <Logo variant="white" size="sm" />
+          {workspaceLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={workspaceLogo}
+              alt={brand}
+              className="h-8 w-auto max-w-[160px] object-contain"
+              draggable={false}
+            />
+          ) : (
+            <span className="text-base font-black tracking-[0.18em] select-none">
+              {brand}
+            </span>
+          )}
         </header>
 
         <main className="flex-1 overflow-hidden">{children}</main>

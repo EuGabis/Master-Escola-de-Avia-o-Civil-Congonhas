@@ -18,6 +18,7 @@ model Workspace {
   id                String   @id @default(cuid())
   name              String
   slug              String   @unique
+  logo              String?  // data URL ou http URL — logo personalizada exibida na sidebar
   evolutionInstance String?
   evolutionUrl      String?
   evolutionKey      String?
