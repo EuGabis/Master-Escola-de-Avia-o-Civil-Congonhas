@@ -1,14 +1,18 @@
 import { cn } from "@/lib/cn";
 
 /**
- * Logo da Master Escola de Aviacao Civil Congonhas.
+ * Logo oficial da Master Escola de Aviacao Civil Congonhas.
  *
- * Usa SVG inline com `currentColor` — adapta a cor pela classe `text-*`.
+ * Reproducao em SVG do logo oficial — texto MASTER, swoosh curvado e
+ * sol laranja com aviao branco.
  *
- * Variants:
+ * Variants controlam APENAS o texto + swoosh (currentColor):
  *   - navy   = #1B2862 (em fundos claros)
  *   - white  = white   (em fundos escuros tipo sidebar)
  *   - orange = master-orange (decorativo)
+ *
+ * O sol laranja e o aviao tem cores FIXAS (sol = gradient laranja Master,
+ * aviao = branco) — preservam a identidade visual em qualquer fundo.
  */
 export function Logo({
   className,
@@ -25,51 +29,76 @@ export function Logo({
     orange: "text-master-orange",
   }[variant];
 
-  // Logo full (com texto MASTER + curva + circulo + aviao)
   const sizes = {
-    sm: "h-7",
-    md: "h-10",
-    lg: "h-16",
+    sm: "h-8",
+    md: "h-12",
+    lg: "h-20",
   }[size];
+
+  // ID unico por instancia evita conflito de gradient quando varias
+  // Logos coexistem na mesma pagina (sidebar + login splash, etc).
+  const gradId = "master-sun-grad";
 
   return (
     <div className={cn("inline-flex items-center", colors, className)}>
       <svg
-        viewBox="0 0 880 240"
+        viewBox="0 0 880 280"
         className={cn(sizes, "w-auto")}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        aria-label="Master Escola de Aviacao Civil Congonhas"
       >
+        <defs>
+          {/* Gradiente radial do sol — claro no centro, escuro nas bordas */}
+          <radialGradient id={gradId} cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="#FFB066" />
+            <stop offset="55%" stopColor="#F26522" />
+            <stop offset="100%" stopColor="#C84810" />
+          </radialGradient>
+        </defs>
+
+        {/* TEXTO MASTER — letras heavy, ligeiramente compactas */}
         <text
-          x="40"
-          y="142"
-          fontFamily="Inter, 'Arial Black', sans-serif"
-          fontSize="120"
+          x="20"
+          y="160"
+          fontFamily="'Helvetica Neue', Inter, 'Arial Black', sans-serif"
+          fontSize="150"
           fontWeight={900}
           fill="currentColor"
-          letterSpacing="4"
+          letterSpacing="-2"
+          fontStyle="normal"
         >
           MASTER
         </text>
-        <circle
-          cx="715"
-          cy="118"
-          r="100"
-          stroke="currentColor"
-          strokeWidth={6}
-        />
+
+        {/* SOL — circulo laranja com gradiente */}
+        <circle cx="725" cy="130" r="115" fill={`url(#${gradId})`} />
+
+        {/* AVIAO BRANCO sobre o sol — desenho simplificado de aeronave
+            comercial em vista lateral, inclinado pra cima e direita */}
         <g
-          transform="translate(715 118) rotate(-28) translate(-55 -22)"
-          fill="currentColor"
+          transform="translate(725 130) rotate(-12) translate(-90 -28)"
+          fill="#ffffff"
         >
-          <path d="M 0 18 L 28 12 L 38 6 L 50 0 L 58 4 L 58 14 L 70 13 L 78 6 L 86 6 L 84 14 L 90 18 L 100 18 L 102 22 L 92 26 L 78 30 L 60 32 L 44 34 L 28 30 L 16 24 Z" />
-          <path d="M 56 4 L 62 -8 L 66 -8 L 64 5 Z" />
-          <path d="M 14 26 L 4 32 L 12 32 L 22 28 Z" />
+          {/* Fuselagem principal + nariz pontudo */}
+          <path d="M 0 28 L 30 22 L 60 18 L 95 14 L 130 12 L 158 14 L 168 18 L 175 24 L 178 30 L 175 36 L 168 40 L 156 42 L 130 44 L 95 44 L 60 40 L 30 36 L 0 30 Z" />
+          {/* Asa principal (lado superior) */}
+          <path d="M 75 18 L 92 -10 L 102 -12 L 118 -8 L 110 16 Z" />
+          {/* Asa de cauda (vertical) */}
+          <path d="M 145 14 L 158 -8 L 168 -8 L 165 12 Z" />
+          {/* Estabilizador horizontal traseiro */}
+          <path d="M 158 22 L 178 12 L 186 12 L 184 22 Z" />
+          <path d="M 158 34 L 178 44 L 186 44 L 184 34 Z" />
+          {/* Rastro/vento curto atras pra sensacao de movimento */}
+          <rect x="-12" y="26" width="14" height="3" rx="1.5" opacity="0.55" />
+          <rect x="-22" y="30" width="20" height="2" rx="1" opacity="0.35" />
         </g>
+
+        {/* SWOOSH — curva curvada passando por baixo do texto ate o sol */}
         <path
-          d="M 38 215 Q 350 245 600 210 Q 720 195 810 130"
+          d="M 28 235 Q 200 270 380 248 T 600 218 Q 680 200 740 175"
           stroke="currentColor"
-          strokeWidth={6}
+          strokeWidth={7}
           strokeLinecap="round"
         />
       </svg>
@@ -78,7 +107,7 @@ export function Logo({
 }
 
 /**
- * Versao compacta - so o circulo com o aviao (sem texto MASTER).
+ * Versao compacta - so o sol com aviao (sem texto MASTER).
  * Usado em sidebar colapsada, favicon e PWA install.
  */
 export function LogoMark({
@@ -87,49 +116,48 @@ export function LogoMark({
   size = "md",
 }: {
   className?: string;
+  /** Mantido por compat. O sol e sempre laranja; variant nao afeta. */
   variant?: "navy" | "white" | "orange";
   size?: "sm" | "md" | "lg";
 }) {
-  const colors = {
-    navy: "text-master-navy",
-    white: "text-white",
-    orange: "text-master-orange",
-  }[variant];
+  // variant atualmente nao e usado (sol e sempre laranja) mas mantemos
+  // a prop pra nao quebrar callsites existentes.
+  void variant;
 
   const sizes = {
-    sm: "w-7 h-7",
-    md: "w-10 h-10",
+    sm: "w-8 h-8",
+    md: "w-12 h-12",
     lg: "w-16 h-16",
   }[size];
+
+  const gradId = "master-sun-mark-grad";
 
   return (
     <svg
       viewBox="0 0 256 256"
-      className={cn(sizes, colors, className)}
+      className={cn(sizes, className)}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      aria-label="Master Escola de Aviacao Civil Congonhas"
     >
-      <circle
-        cx="128"
-        cy="128"
-        r="84"
-        stroke="currentColor"
-        strokeWidth={8}
-      />
+      <defs>
+        <radialGradient id={gradId} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#FFB066" />
+          <stop offset="55%" stopColor="#F26522" />
+          <stop offset="100%" stopColor="#C84810" />
+        </radialGradient>
+      </defs>
+      <circle cx="128" cy="128" r="110" fill={`url(#${gradId})`} />
       <g
-        transform="translate(128 128) rotate(-28) translate(-50 -20)"
-        fill="currentColor"
+        transform="translate(128 128) rotate(-12) translate(-80 -25)"
+        fill="#ffffff"
       >
-        <path d="M 0 16 L 26 11 L 36 5 L 48 0 L 56 4 L 56 13 L 66 12 L 74 5 L 80 5 L 78 13 L 84 16 L 92 16 L 94 20 L 84 24 L 70 28 L 54 30 L 40 32 L 26 28 L 14 22 Z" />
-        <path d="M 54 4 L 60 -8 L 64 -8 L 62 5 Z" />
-        <path d="M 12 24 L 2 30 L 10 30 L 20 26 Z" />
+        <path d="M 0 25 L 27 20 L 54 16 L 85 13 L 117 11 L 142 13 L 151 16 L 158 22 L 161 27 L 158 32 L 151 36 L 140 38 L 117 40 L 85 40 L 54 36 L 27 32 L 0 27 Z" />
+        <path d="M 67 16 L 82 -9 L 92 -11 L 106 -7 L 99 14 Z" />
+        <path d="M 130 13 L 142 -7 L 151 -7 L 148 11 Z" />
+        <path d="M 142 20 L 161 11 L 168 11 L 166 20 Z" />
+        <path d="M 142 31 L 161 40 L 168 40 L 166 31 Z" />
       </g>
-      <path
-        d="M 40 200 Q 128 230 216 168"
-        stroke="currentColor"
-        strokeWidth={6}
-        strokeLinecap="round"
-      />
     </svg>
   );
 }
