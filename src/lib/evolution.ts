@@ -105,6 +105,28 @@ export async function sendMedia(args: SendMediaArgs) {
   });
 }
 
+interface SendAudioArgs {
+  number: string;
+  /** Data URL base64 OU URL http. Evolution aceita ambos no campo `audio`. */
+  audio: string;
+}
+
+/**
+ * Envia uma nota de voz (PTT). Diferente de sendMedia type=audio,
+ * /message/sendWhatsAppAudio entrega como mensagem de voz nativa do
+ * whatsapp (visual de microfone + waveform), nao como arquivo de audio.
+ */
+export async function sendWhatsAppAudio(args: SendAudioArgs) {
+  const { name } = getInstance();
+  return callEvolution(`/message/sendWhatsAppAudio/${encodeURIComponent(name)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      number: args.number,
+      audio: args.audio,
+    }),
+  });
+}
+
 // ============================================================
 // Configuracao do webhook
 // ============================================================

@@ -416,6 +416,32 @@ async function handleConnectionUpdate(workspaceId: string, payload: WebhookPaylo
 // Extracao de conteudo do payload Evolution
 // ============================================================
 
+/**
+ * Desempacota wrappers da Evolution (ephemeralMessage, viewOnceMessage,
+ * editedMessage etc) ate chegar no payload "real" da mensagem. Suporta
+ * aninhamento (uma msg pode ser efemera + view-once ao mesmo tempo).
+ * Mantemos um limite de 5 niveis pra evitar loop em payload malformado.
+ */
+function unwrapMessage(
+  m: EvolutionMessageBody,
+  depth = 0
+): EvolutionMessageBody {
+  if (depth >= 5 || !m) return m;
+  if (m.ephemeralMessage?.message)
+    return unwrapMessage(m.ephemeralMessage.message, depth + 1);
+  if (m.viewOnceMessage?.message)
+    return unwrapMessage(m.viewOnceMessage.message, depth + 1);
+  if (m.viewOnceMessageV2?.message)
+    return unwrapMessage(m.viewOnceMessageV2.message, depth + 1);
+  if (m.viewOnceMessageV2Extension?.message)
+    return unwrapMessage(m.viewOnceMessageV2Extension.message, depth + 1);
+  if (m.editedMessage?.message)
+    return unwrapMessage(m.editedMessage.message, depth + 1);
+  if (m.protocolMessage?.editedMessage)
+    return unwrapMessage(m.protocolMessage.editedMessage, depth + 1);
+  return m;
+}
+
 function extractContent(
   msg: EvolutionMessage,
   payloadData?: { message?: { base64?: string }; messageBase64?: string }
@@ -426,13 +452,8 @@ function extractContent(
   mediaBase64?: string;
   fileName?: string;
 } {
-  const m = msg.message ?? {};
+  const m = unwrapMessage(msg.message ?? {});
 
-  // Evolution v2.x pode entregar a base64 em varios lugares dependendo da versao:
-  //   1. payload.data.message.base64           (mais comum)
-  //   2. payload.data.messageBase64            (algumas versoes)
-  //   3. payload.data.message.<type>.base64    (alguns campos especificos)
-  //   4. payload.data.message.<type>.url       (URL pra download direto)
   function pickBase64(typed?: { base64?: string; url?: string }): {
     mediaBase64?: string;
     mediaUrl?: string;
@@ -447,12 +468,12 @@ function extractContent(
     };
   }
 
-  if (m.conversation) {
-    return { content: m.conversation, type: "text" };
-  }
-  if (m.extendedTextMessage?.text) {
+  // ===== TEXTO =====
+  if (m.conversation) return { content: m.conversation, type: "text" };
+  if (m.extendedTextMessage?.text)
     return { content: m.extendedTextMessage.text, type: "text" };
-  }
+
+  // ===== MIDIAS =====
   if (m.imageMessage) {
     const media = pickBase64({
       base64: m.imageMessage.base64,
@@ -499,14 +520,78 @@ function extractContent(
       base64: m.stickerMessage.base64,
       url: m.stickerMessage.url,
     });
-    return { content: "[sticker]", type: "sticker", ...media };
+    return { content: "[figurinha]", type: "sticker", ...media };
   }
-  if (m.locationMessage) {
-    return { content: "[localizacao]", type: "location" };
+
+  // ===== REACOES (emoji) =====
+  if (m.reactionMessage) {
+    const emoji = m.reactionMessage.text?.trim();
+    // Reacao vazia significa "removeu a reacao"
+    if (!emoji) return { content: "↩ removeu a reação", type: "reaction" };
+    return { content: `${emoji} reagiu à mensagem`, type: "reaction" };
   }
-  if (m.contactMessage) {
-    return { content: "[contato]", type: "contact" };
+
+  // ===== INTERATIVAS (botoes / listas) =====
+  if (m.buttonsResponseMessage) {
+    const text =
+      m.buttonsResponseMessage.selectedDisplayText ||
+      m.buttonsResponseMessage.selectedButtonId ||
+      "[botao]";
+    return { content: text, type: "text" };
   }
+  if (m.listResponseMessage) {
+    const text =
+      m.listResponseMessage.title ||
+      m.listResponseMessage.singleSelectReply?.selectedRowId ||
+      "[opcao da lista]";
+    return { content: text, type: "text" };
+  }
+  if (m.templateButtonReplyMessage) {
+    const text =
+      m.templateButtonReplyMessage.selectedDisplayText ||
+      m.templateButtonReplyMessage.selectedId ||
+      "[resposta]";
+    return { content: text, type: "text" };
+  }
+  if (m.interactiveResponseMessage) {
+    return {
+      content:
+        m.interactiveResponseMessage.body?.text ?? "[resposta interativa]",
+      type: "text",
+    };
+  }
+
+  // ===== ENQUETES =====
+  if (m.pollCreationMessage || m.pollCreationMessageV3) {
+    const poll = m.pollCreationMessage ?? m.pollCreationMessageV3;
+    const q = poll?.name ?? "Enquete";
+    const opts = (poll?.options ?? [])
+      .map((o) => o?.optionName)
+      .filter(Boolean)
+      .join(" · ");
+    return {
+      content: opts ? `📊 ${q} — ${opts}` : `📊 ${q}`,
+      type: "poll",
+    };
+  }
+  if (m.pollUpdateMessage) {
+    return { content: "🗳 votou em uma enquete", type: "poll" };
+  }
+
+  // ===== OUTROS =====
+  if (m.locationMessage) return { content: "📍 localização", type: "location" };
+  if (m.contactMessage) return { content: "👤 cartão de contato", type: "contact" };
+  if (m.contactsArrayMessage) {
+    const n = m.contactsArrayMessage.contacts?.length ?? 0;
+    return { content: `👤 ${n} contatos`, type: "contact" };
+  }
+  if (m.liveLocationMessage)
+    return { content: "📍 localização em tempo real", type: "location" };
+
+  // Mensagem foi DELETADA pelo remetente
+  if (m.protocolMessage?.type === 0 || m.protocolMessage?.type === "REVOKE")
+    return { content: "🚫 mensagem apagada", type: "deleted" };
+
   return { content: "[mensagem nao suportada]", type: "unknown" };
 }
 
@@ -541,22 +626,66 @@ interface MediaPayload {
   mimetype?: string;
 }
 
+interface PollOption {
+  optionName?: string;
+}
+
+interface PollPayload {
+  name?: string;
+  options?: PollOption[];
+}
+
+/**
+ * Estrutura recursiva — wrappers (ephemeral/viewOnce/edited) contem
+ * um sub-`message` do mesmo formato. unwrapMessage() faz a recursao.
+ */
+interface EvolutionMessageBody {
+  conversation?: string;
+  extendedTextMessage?: { text: string };
+  imageMessage?: MediaPayload;
+  videoMessage?: MediaPayload;
+  audioMessage?: MediaPayload;
+  documentMessage?: MediaPayload;
+  stickerMessage?: MediaPayload;
+  locationMessage?: object;
+  liveLocationMessage?: object;
+  contactMessage?: object;
+  contactsArrayMessage?: { contacts?: unknown[] };
+  reactionMessage?: { text?: string; key?: { id?: string } };
+  buttonsResponseMessage?: {
+    selectedButtonId?: string;
+    selectedDisplayText?: string;
+  };
+  listResponseMessage?: {
+    title?: string;
+    singleSelectReply?: { selectedRowId?: string };
+  };
+  templateButtonReplyMessage?: {
+    selectedId?: string;
+    selectedDisplayText?: string;
+  };
+  interactiveResponseMessage?: { body?: { text?: string } };
+  pollCreationMessage?: PollPayload;
+  pollCreationMessageV3?: PollPayload;
+  pollUpdateMessage?: object;
+  // Wrappers que envolvem outra mensagem
+  ephemeralMessage?: { message?: EvolutionMessageBody };
+  viewOnceMessage?: { message?: EvolutionMessageBody };
+  viewOnceMessageV2?: { message?: EvolutionMessageBody };
+  viewOnceMessageV2Extension?: { message?: EvolutionMessageBody };
+  editedMessage?: { message?: EvolutionMessageBody };
+  protocolMessage?: {
+    type?: number | string;
+    editedMessage?: EvolutionMessageBody;
+  };
+  base64?: string;
+}
+
 interface EvolutionMessage {
   key: { id: string; remoteJid: string; fromMe?: boolean };
   pushName?: string;
   messageTimestamp?: number;
-  message?: {
-    conversation?: string;
-    extendedTextMessage?: { text: string };
-    imageMessage?: MediaPayload;
-    videoMessage?: MediaPayload;
-    audioMessage?: MediaPayload;
-    documentMessage?: MediaPayload;
-    stickerMessage?: MediaPayload;
-    locationMessage?: object;
-    contactMessage?: object;
-    base64?: string;
-  };
+  message?: EvolutionMessageBody;
 }
 
 interface WebhookPayload {

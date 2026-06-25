@@ -33,6 +33,7 @@ import { useToast } from "@/components/Toast";
 import { SkeletonList } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { UserAvatar } from "@/components/UserAvatar";
+import { AudioRecorder } from "@/components/AudioRecorder";
 import { compressImage } from "@/lib/compress";
 import { avatarGradient, avatarInitial } from "@/lib/avatar";
 
@@ -87,6 +88,9 @@ export default function ConversationsClient({
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [recorderState, setRecorderState] = useState<
+    "idle" | "recording" | "sending"
+  >("idle");
   const [quickReplies, setQuickReplies] = useState<{ id: string; title: string; content: string }[]>([]);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [mobileShowPanel, setMobileShowPanel] = useState(false);
@@ -868,34 +872,54 @@ export default function ConversationsClient({
                 )}
               </div>
 
-              <input
-                ref={textInputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setShowQuickReplies(false);
-                    setShowAttachMenu(false);
+              {recorderState === "idle" && (
+                <input
+                  ref={textInputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setShowQuickReplies(false);
+                      setShowAttachMenu(false);
+                    }
+                  }}
+                  placeholder={
+                    uploading ? "Enviando..." : "Digite uma mensagem..."
                   }
-                }}
-                placeholder={
-                  uploading
-                    ? "Enviando..."
-                    : "Digite uma mensagem..."
-                }
+                  disabled={sending || uploading}
+                  autoFocus
+                  className="flex-1 min-w-0 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 md:px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
+                />
+              )}
+
+              {/* Gravador de audio — quando idle e so o botao de mic
+                  pequenino; quando recording/sending vira o painel
+                  inteiro com cronometro e controles. */}
+              <AudioRecorder
                 disabled={sending || uploading}
-                autoFocus
-                className="flex-1 min-w-0 rounded-pill border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 md:px-5 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-master-orange focus:border-transparent"
+                onStateChange={setRecorderState}
+                onSend={async (file) => {
+                  await handleFileUpload(file);
+                }}
               />
-              <button
-                type="submit"
-                disabled={sending || uploading || !input.trim()}
-                className="rounded-full md:rounded-pill bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium p-2.5 md:px-6 md:py-2.5 flex items-center gap-2 shrink-0"
-                aria-label="Enviar mensagem"
-              >
-                <Send size={16} />
-                <span className="hidden md:inline">{sending ? "..." : "Enviar"}</span>
-              </button>
+
+              {/* Botao Enviar — escondido durante gravacao pra deixar
+                  o painel do recorder respirar. Tambem some quando
+                  input ta vazio (UX whats-style: so aparece quando ha
+                  o que enviar). */}
+              {recorderState === "idle" && input.trim() && (
+                <button
+                  type="submit"
+                  disabled={sending || uploading}
+                  className="rounded-full md:rounded-pill bg-master-orange hover:bg-master-orange-600 disabled:opacity-50 text-white font-medium p-2.5 md:px-6 md:py-2.5 flex items-center gap-2 shrink-0 active:scale-95 transition"
+                  aria-label="Enviar mensagem"
+                >
+                  <Send size={16} />
+                  <span className="hidden md:inline">
+                    {sending ? "..." : "Enviar"}
+                  </span>
+                </button>
+              )}
             </form>
           </>
         )}

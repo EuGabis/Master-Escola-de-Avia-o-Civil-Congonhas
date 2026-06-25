@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { sendMedia } from "@/lib/evolution";
+import { sendMedia, sendWhatsAppAudio } from "@/lib/evolution";
 import { pusher, channels, events as ev } from "@/lib/pusher";
 import { validateMediaDataUrl } from "@/lib/security";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
@@ -59,16 +59,23 @@ export async function POST(
   // _ip kept for future audit/logging
   void getClientIp(req);
 
-  // Envia via Evolution
+  // Envia via Evolution. Audio usa sendWhatsAppAudio (nota de voz/PTT
+  // nativa do whats com waveform); outras midias usam sendMedia.
   let evolutionId: string | undefined;
   try {
-    const result = await sendMedia({
-      number: conv.contact.phone,
-      mediaUrl: body.mediaDataUrl, // Evolution aceita data URL
-      mediaType: body.mediaType,
-      fileName: body.fileName,
-      caption: body.caption,
-    });
+    const result =
+      body.mediaType === "audio"
+        ? await sendWhatsAppAudio({
+            number: conv.contact.phone,
+            audio: body.mediaDataUrl,
+          })
+        : await sendMedia({
+            number: conv.contact.phone,
+            mediaUrl: body.mediaDataUrl,
+            mediaType: body.mediaType,
+            fileName: body.fileName,
+            caption: body.caption,
+          });
     evolutionId = (result as { key?: { id?: string } })?.key?.id;
   } catch (err) {
     console.error("[media] erro Evolution:", err);
