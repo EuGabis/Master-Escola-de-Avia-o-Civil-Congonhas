@@ -11,6 +11,7 @@ interface Contact {
   name: string;
   phone: string;
   email: string | null;
+  avatar: string | null;
   notes: string | null;
 }
 
@@ -199,9 +200,11 @@ export function ConversationPanel({
       {/* CONTATO */}
       <Section title="Contato">
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-full bg-master-orange/10 text-master-orange flex items-center justify-center text-base font-bold shrink-0">
-            {conv.contact.name.charAt(0).toUpperCase()}
-          </div>
+          <UserAvatar
+            name={conv.contact.name}
+            avatar={conv.contact.avatar}
+            size={48}
+          />
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-slate-900 dark:text-white truncate">
               {conv.contact.name}

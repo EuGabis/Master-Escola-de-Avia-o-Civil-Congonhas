@@ -35,7 +35,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { UserAvatar } from "@/components/UserAvatar";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { compressImage } from "@/lib/compress";
-import { avatarGradient, avatarInitial } from "@/lib/avatar";
 
 type Status = "open" | "pending" | "resolved" | "all";
 
@@ -468,12 +467,11 @@ export default function ConversationsClient({
                     "bg-master-orange-50 dark:bg-master-orange-900/10 border-l-4 border-l-master-orange"
                 )}
               >
-                <div
-                  style={avatarGradient(c.contact.name).style}
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white shadow-sm"
-                >
-                  {avatarInitial(c.contact.name)}
-                </div>
+                <UserAvatar
+                  name={c.contact.name}
+                  avatar={c.contact.avatar}
+                  size={40}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-slate-900 dark:text-white truncate">

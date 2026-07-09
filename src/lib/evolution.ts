@@ -206,6 +206,29 @@ export async function findChats(): Promise<EvolutionChat[]> {
 }
 
 /**
+ * Busca a URL da foto de perfil de um numero no WhatsApp.
+ * Endpoint: POST /chat/fetchProfilePictureUrl/{instance}
+ *
+ * Retorna null se o contato nao tiver foto publica ou se a Evolution
+ * falhar — nunca lanca, pra nao derrubar um sync em lote.
+ */
+export async function fetchProfilePicture(number: string): Promise<string | null> {
+  const { name } = getInstance();
+  try {
+    const data = await callEvolution<{
+      profilePictureUrl?: string;
+      profilePicUrl?: string;
+    }>(`/chat/fetchProfilePictureUrl/${encodeURIComponent(name)}`, {
+      method: "POST",
+      body: JSON.stringify({ number }),
+    });
+    return data?.profilePictureUrl ?? data?.profilePicUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Extrai o melhor nome possivel de um objeto vindo da Evolution.
  * Ordem de preferencia: pushName (perfil do contato) > verifiedName
  * (whatsapp business) > notify > name (nome da agenda local).

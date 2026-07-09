@@ -22,13 +22,14 @@ import { SkeletonList } from "@/components/Skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ContactDetailModal } from "./ContactDetailModal";
 import { cn } from "@/lib/cn";
-import { avatarGradient, avatarInitial } from "@/lib/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface Contact {
   id: string;
   name: string;
   phone: string;
   email: string | null;
+  avatar: string | null;
   notes: string | null;
   courseInterest: string | null;
   source: string | null;
@@ -204,9 +205,9 @@ export default function ContatosClient() {
       }
       const s = data.summary ?? {};
       const detail =
-        `Atualizados: ${s.atualizados ?? 0} | ` +
-        `Já corretos: ${s.jaIguais ?? 0} | ` +
-        `Sem match: ${s.semCorrespondencia ?? 0} | ` +
+        `Criados: ${s.criados ?? 0} | ` +
+        `Nomes: ${s.atualizados ?? 0} | ` +
+        `Fotos: ${s.fotosAtualizadas ?? 0} | ` +
         `Evolution: ${s.evolutionContacts ?? 0} contacts + ${s.evolutionChats ?? 0} chats`;
       toast.success("Sincronização concluída (veja console F12 pra detalhe)", detail);
       void load();
@@ -265,7 +266,7 @@ export default function ContatosClient() {
               variant="ghost"
               onClick={handleSyncNames}
               disabled={syncingNames}
-              title="Atualizar nomes dos contatos pelo WhatsApp"
+              title="Sincronizar contatos (nomes e fotos) pelo WhatsApp"
             >
               <span className="flex items-center gap-2">
                 <RefreshCw
@@ -273,7 +274,7 @@ export default function ContatosClient() {
                   className={syncingNames ? "animate-spin" : ""}
                 />
                 <span className="hidden md:inline">
-                  {syncingNames ? "Sincronizando..." : "Sincronizar nomes"}
+                  {syncingNames ? "Sincronizando..." : "Sincronizar contatos"}
                 </span>
               </span>
             </Button>
@@ -561,12 +562,12 @@ function ContactRow({
         onClick={onDetail}
         className="flex-1 md:flex-initial flex items-start md:items-center gap-3 min-w-0 text-left"
       >
-        <div
-          style={avatarGradient(contact.name).style}
-          className="w-9 h-9 md:w-8 md:h-8 rounded-full text-white flex items-center justify-center text-sm md:text-xs font-bold shrink-0 shadow-sm"
-        >
-          {avatarInitial(contact.name)}
-        </div>
+        <UserAvatar
+          name={contact.name}
+          avatar={contact.avatar}
+          size={36}
+          className="md:!w-8 md:!h-8"
+        />
         <div className="min-w-0 flex-1">
           <div className="font-medium text-slate-900 dark:text-white truncate text-sm group-hover:text-master-orange transition">
             {contact.name}

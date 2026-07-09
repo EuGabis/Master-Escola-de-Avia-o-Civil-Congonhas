@@ -46,19 +46,21 @@ export function UserAvatar({
         width: size,
         height: size,
         fontSize: fontPx,
-        ...(hasImage ? {} : avatarGradient(name).style),
+        // Gradiente + inicial ficam SEMPRE no fundo. Quando ha foto, a imagem
+        // cobre por cima; se a URL falhar/expirar (comum em foto do WhatsApp),
+        // o gradiente aparece por baixo — fallback sem precisar de JS.
+        ...avatarGradient(name).style,
       }}
     >
-      {hasImage ? (
+      <span aria-hidden="true">{avatarInitial(name)}</span>
+      {hasImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatar!}
           alt={alt ?? name}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
           draggable={false}
         />
-      ) : (
-        <span aria-hidden="true">{avatarInitial(name)}</span>
       )}
       {online && (
         <span
